@@ -8,25 +8,6 @@
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    .tabbed-main { padding:1rem; }
-    .tab-switch { position:absolute; opacity:0; pointer-events:none; }
-    .app-tabs { display:flex; gap:.5rem; margin-bottom:1rem; border-bottom:1px solid var(--line); }
-    .tab-label { display:inline-flex; align-items:center; justify-content:center; border:0; border-radius:10px 10px 0 0; padding:.75rem 1rem; font-weight:800; background:#eaf3ef; color:var(--green); cursor:pointer; }
-    #tabApplicant:checked ~ .app-tabs label[for="tabApplicant"],
-    #tabDatabase:checked ~ .app-tabs label[for="tabDatabase"] { background:var(--green); color:#fff; }
-    .tab-panel { display:none; }
-    #tabApplicant:checked ~ .tab-content #readonlyTab { display:block; }
-    #tabDatabase:checked ~ .tab-content #databaseTab { display:grid; grid-template-columns:1fr; gap:1rem; }
-    .readonly-top-actions { justify-content:flex-start; margin:.25rem 0 .75rem; }
-    #applicantTableWrap table th:first-child,
-    #applicantTableWrap table td:first-child { display:none; }
-    @media (max-width:700px) {
-      .tabbed-main { padding:.75rem; }
-      .app-tabs { position:sticky; top:0; z-index:10; background:var(--bg); padding-top:.35rem; }
-      .tab-label { flex:1; }
-    }
-  </style>
 </head>
 <body>
   <header class="app-header">
@@ -54,55 +35,50 @@
   </div>
 
   <main class="tabbed-main">
-    <input class="tab-switch" type="radio" name="mainTab" id="tabApplicant" checked>
-    <input class="tab-switch" type="radio" name="mainTab" id="tabDatabase">
-
     <div class="app-tabs" role="tablist" aria-label="Main sections">
-      <label class="tab-label" for="tabApplicant">Applicant Data</label>
-      <label class="tab-label" for="tabDatabase">Database</label>
+      <button id="applicantDataTabBtn" class="tab-btn active" type="button" data-tab-target="readonlyTab">Applicant Data</button>
+      <button id="databaseTabBtn" class="tab-btn" type="button" data-tab-target="databaseTab">Database</button>
     </div>
 
-    <div class="tab-content">
-      <div id="readonlyTab" class="tab-panel" role="tabpanel">
-        <section class="panel full" id="readonlySection">
-          <div class="section-head">
-            <h2>Applicant Data</h2>
-          </div>
-          <div class="readonly-actions readonly-top-actions">
-            <button id="readonlyNewApplicantBtn" type="button" onclick="document.getElementById('addApplicantBtn')?.click()">New Applicant</button>
-            <button id="readonlyEditApplicantBtn" type="button" class="secondary" onclick="const id=document.getElementById('readonlyApplicantSelect')?.value||''; if(!id){alert('Select an applicant first.');} else {document.getElementById('tabDatabase').checked=true; setTimeout(()=>document.querySelector('[data-edit-applicant=&quot;'+CSS.escape(id)+'&quot;]')?.click(),0);}">Edit</button>
-          </div>
-          <div class="readonly-picker">
-            <label class="stacked">
-              Select applicant
-              <select id="readonlyApplicantSelect"></select>
-            </label>
-          </div>
-          <div id="readonlyCard"></div>
-          <div class="readonly-actions readonly-actions-bottom">
-            <button id="markCompleteBtn" type="button">Mark Complete</button>
-            <button id="nextApplicantBtn" type="button" class="secondary">Next</button>
-          </div>
-        </section>
-      </div>
+    <div id="readonlyTab" class="tab-panel active" role="tabpanel">
+      <section class="panel full" id="readonlySection">
+        <div class="section-head">
+          <h2>Applicant Data</h2>
+        </div>
+        <div class="readonly-actions readonly-top-actions">
+          <button id="readonlyNewApplicantBtn" type="button">New Applicant</button>
+          <button id="readonlyEditApplicantBtn" type="button" class="secondary">Edit</button>
+        </div>
+        <div class="readonly-picker">
+          <label class="stacked">
+            Select applicant
+            <select id="readonlyApplicantSelect"></select>
+          </label>
+        </div>
+        <div id="readonlyCard"></div>
+        <div class="readonly-actions readonly-actions-bottom">
+          <button id="markCompleteBtn" type="button">Mark Complete</button>
+          <button id="nextApplicantBtn" type="button" class="secondary">Next</button>
+        </div>
+      </section>
+    </div>
 
-      <div id="databaseTab" class="tab-panel" role="tabpanel">
-        <section class="panel" id="applicantsSection">
-          <div class="section-head">
-            <h2>Applicant Database</h2>
-            <button id="addApplicantBtn">Add Applicant</button>
-          </div>
-          <div id="applicantTableWrap" class="table-wrap"></div>
-        </section>
+    <div id="databaseTab" class="tab-panel database-grid" role="tabpanel">
+      <section class="panel" id="applicantsSection">
+        <div class="section-head">
+          <h2>Applicant Database</h2>
+          <button id="addApplicantBtn">Add Applicant</button>
+        </div>
+        <div id="applicantTableWrap" class="table-wrap"></div>
+      </section>
 
-        <section class="panel" id="peopleSection">
-          <div class="section-head">
-            <h2>People Database</h2>
-            <button id="addPersonBtn">Add Person</button>
-          </div>
-          <div id="peopleTableWrap" class="table-wrap"></div>
-        </section>
-      </div>
+      <section class="panel" id="peopleSection">
+        <div class="section-head">
+          <h2>People Database</h2>
+          <button id="addPersonBtn">Add Person</button>
+        </div>
+        <div id="peopleTableWrap" class="table-wrap"></div>
+      </section>
     </div>
   </main>
 
