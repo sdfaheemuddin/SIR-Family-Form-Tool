@@ -1,84 +1,446 @@
-// Native UI rendering and user actions. No enhancement wrapper files.
-import {
-  RELATIONSHIPS, blankApplicant, blankPerson, buildReadonly, formatAadhaar,
-  has2002Details, hasEpic, normalizeApplicant, normalizeEpic, normalizePerson,
-  onlyDigits, personReferences, validateApplicant, validatePerson
-} from "./core.js";
+// Main UI rendering and non-popup actions.
+import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 import { backupState, clearState } from "./storage.js";
 import { downloadJson, parseImportFile, sirFileBaseFromState } from "./importExport.js";
 import { generatePdf, generateOfflinePdf } from "./pdf.js";
 
-const ADD_NEW = "__add_new__";
-const MAX_PHOTO_BYTES = 1.8 * 1024 * 1024;
-let stateRef, commitRef, modalDepth = 0;
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
+let stateRef;
+let commitRef;
+let modalDepth = 0;
 
-const el = (tag, props = {}, children = []) => {
-  const n = document.createElement(tag);
-  Object.entries(props).forEach(([k, v]) => {
-    if (k === "class") n.className = v;
-    else if (k === "text") n.textContent = v;
-    else if (k === "html") n.innerHTML = v;
-    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
-    else if (v !== undefined && v !== null) n.setAttribute(k, v);
+const $ = selector => document.querySelector(selector);
+const $$ = selector => Array.from(document.querySelectorAll(selector));
+
+function esc(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[ch]));
+}
+
+function clean(value) {
+  return String(value ?? "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
+function dmy(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : String(value || "");
+}
+
+function onlyValidPhoto(src) {
+  return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(String(src || ""));
+}
+
+function safeFilePart(value) {
+  return String(value || "applicant")
+    .trim()
+    .replace(/[^a-z0-9]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60) || "applicant";
+}
+
+function personById(id) {
+  return stateRef.people.find(person => person.person_id === id) || {};
+}
+
+function personName(id) {
+  return personById(id).name || "";
+}
+
+function personEpic(id) {
+  return personById(id).epic_number || "";
+}
+
+function toast(message) {
+  const box = $("#toast");
+  if (!box) return;
+  box.textContent = message;
+  box.classList.add("show");
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => box.classList.remove("show"), 2200);
+}
+
+function el(tag, props = {}, children = []) {
+  const node = document.createElement(tag);
+  Object.entries(props).forEach(([key, value]) => {
+    if (key === "class") node.className = value;
+    else if (key === "text") node.textContent = value;
+    else if (key === "html") node.innerHTML = value;
+    else if (key.startsWith("on") && typeof value === "function") node.addEventListener(key.slice(2), value);
+    else if (value !== undefined && value !== null) node.setAttribute(key, value);
   });
-  children.forEach(c => n.append(c));
-  return n;
-};
-function esc(v){return String(v??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));}
-function clean(v){return String(v??"").replace(/[\r\n\t]+/g," ").replace(/\s{2,}/g," ").trim();}
-function dmy(v){const m=String(v||"").match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}-${m[2]}-${m[1]}`:String(v||"");}
-function person(id){return stateRef.people.find(p=>p.person_id===id)||{};}
-function pname(id){return person(id).name||"";}
-function pepic(id){return person(id).epic_number||"";}
-function toast(msg){const b=$("#toast"); if(!b) return; b.textContent=msg; b.classList.add("show"); clearTimeout(toast.t); toast.t=setTimeout(()=>b.classList.remove("show"),2600);}
-function showErrors(box, errors){box.style.display=errors.length?"block":"none"; box.textContent=errors.join("\n");}
-function safeFilePart(v){return String(v||"applicant").trim().replace(/[^a-z0-9]+/gi,"_").replace(/^_+|_+$/g,"").slice(0,60)||"applicant";}
-function validPhoto(src){return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(String(src||""));}
+  children.forEach(child => node.append(child));
+  return node;
+}
 
-function openModal(title, content){modalDepth++; const root=$("#modalRoot"); const back=el("div",{class:"modal-backdrop"}); back.style.zIndex=String(1000+modalDepth*20); const m=el("div",{class:"modal"}); const close=el("button",{type:"button",class:"small secondary",text:"Close",onclick:()=>closeModal(back)}); m.append(el("div",{class:"modal-head"},[el("h3",{text:title}),close]),content); back.append(m); root.append(back); return back;}
-function closeModal(back){back?.remove(); modalDepth=Math.max(0,modalDepth-1);}
+function openModal(title, content) {
+  modalDepth += 1;
+  const root = $("#modalRoot");
+  const backdrop = el("div", { class: "modal-backdrop" });
+  backdrop.style.zIndex = String(1000 + modalDepth * 20);
+  const modal = el("div", { class: "modal" });
+  const close = el("button", {
+    type: "button",
+    class: "small secondary",
+    text: "Close",
+    onclick: () => closeModal(backdrop)
+  });
+  modal.append(el("div", { class: "modal-head" }, [el("h3", { text: title }), close]), content);
+  backdrop.append(modal);
+  root.append(backdrop);
+  return backdrop;
+}
 
-function photoDownloadBlock(a, name){if(!validPhoto(a.photo_data)) return ""; return `<section class="read-section photo-read-section"><h4>Applicant Photo</h4><div class="readonly-photo-box"><img class="readonly-photo" src="${esc(a.photo_data)}" alt="Applicant photo"><a class="button-link small" href="${esc(a.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download Photo</a></div></section>`;}
-function readCell(label,value,copy=true,display=value){const c=clean(value);return `<div class="copy-table-cell ${copy?"":"no-copy"}" ${copy?`role="button" tabindex="0" data-copy="${esc(c)}"`:""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div></div>`;}
-async function copyText(v){try{await navigator.clipboard.writeText(clean(v)); toast("Copied.");}catch{const t=document.createElement("textarea");t.value=clean(v);document.body.append(t);t.select();document.execCommand("copy");t.remove();toast("Copied.");}}
+function closeModal(backdrop) {
+  backdrop?.remove();
+  modalDepth = Math.max(0, modalDepth - 1);
+}
 
-function renderPeople(){const w=$("#peopleTableWrap"); if(!stateRef.people.length){w.innerHTML='<div class="empty">No people saved yet.</div>'; return;} w.innerHTML=`<table><thead><tr><th>Name</th><th>EPIC</th><th>2002 Details</th><th>Actions</th></tr></thead><tbody>${stateRef.people.map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.epic_number)}</td><td>${p.is_2002_available?`<span class="badge">Yes</span><br>${esc(p.state_2002)}, ${esc(p.district_2002)}<br>AC ${esc(p.ac_no_2002)}${p.ac_name_2002?"-"+esc(p.ac_name_2002):""}, Part ${esc(p.part_no_2002)}, Sl ${esc(p.sl_no_2002)}`:"No"}</td><td><div class="row-actions"><button class="small secondary" data-edit-person="${p.person_id}">Edit</button><button class="small danger" data-delete-person="${p.person_id}">Delete</button></div></td></tr>`).join("")}</tbody></table>`; w.querySelectorAll("[data-edit-person]").forEach(b=>b.addEventListener("click",()=>openPersonModal({personId:b.dataset.editPerson}))); w.querySelectorAll("[data-delete-person]").forEach(b=>b.addEventListener("click",()=>deletePerson(b.dataset.deletePerson)));}
-function renderApplicants(){const w=$("#applicantTableWrap"); if(!stateRef.applicants.length){w.innerHTML='<div class="empty">No applicants saved yet.</div>'; return;} w.innerHTML=`<table><thead><tr><th>Applicant</th><th>DOB</th><th>Mapper</th><th>Relation</th><th>Phone</th><th>Aadhaar</th><th>Status</th><th>Actions</th></tr></thead><tbody>${stateRef.applicants.map(a=>`<tr><td>${esc(pname(a.person_id))}<br><small>${esc(pepic(a.person_id))}</small></td><td>${esc(dmy(a.date_of_birth))}</td><td>${esc(pname(a.mapper_person_id))}</td><td>${esc(a.mapper_relationship)}</td><td>${/^\d{10}$/.test(a.phone_number)?`<a href="https://wa.me/91${esc(a.phone_number)}?text=${encodeURIComponent("SIR acknowledgement")}" target="_blank" rel="noopener">${esc(a.phone_number)}</a>`:esc(a.phone_number)}</td><td>${esc(formatAadhaar(a.aadhaar_number))}</td><td><label class="checkbox-line compact"><input type="checkbox" data-toggle-status="${a.applicant_id}" ${a.status_completed?"checked":""}><span>${a.status_completed?"Completed":"Pending"}</span></label></td><td><div class="row-actions"><button class="small secondary" data-edit-applicant="${a.applicant_id}">Edit</button><button class="small danger" data-delete-applicant="${a.applicant_id}">Delete</button></div></td></tr>`).join("")}</tbody></table>`; w.querySelectorAll("[data-edit-applicant]").forEach(b=>b.addEventListener("click",()=>openApplicantModal(b.dataset.editApplicant))); w.querySelectorAll("[data-delete-applicant]").forEach(b=>b.addEventListener("click",()=>deleteApplicant(b.dataset.deleteApplicant))); w.querySelectorAll("[data-toggle-status]").forEach(b=>b.addEventListener("change",()=>{const a=stateRef.applicants.find(x=>x.applicant_id===b.dataset.toggleStatus); if(a){a.status_completed=b.checked; commitRef(); renderReadonlyPicker();}}));}
-function renderAll(){renderPeople(); renderApplicants(); renderReadonlyPicker();}
-function pending(){return stateRef.applicants.filter(a=>!a.status_completed);}
-function renderReadonlyPicker(){const s=$("#readonlyApplicantSelect"); const rows=pending(); s.innerHTML='<option value="">Select applicant</option>'+rows.map(a=>`<option value="${esc(a.applicant_id)}">${esc(pname(a.person_id)||"Unnamed applicant")}</option>`).join(""); const prev=s.dataset.selected||""; s.value=rows.some(a=>a.applicant_id===prev)?prev:(rows[0]?.applicant_id||""); s.dataset.selected=s.value; renderReadonlyCard(s.value); syncReadonlyButtons();}
-function syncReadonlyButtons(){const has=Boolean($("#readonlyApplicantSelect")?.value); $("#markCompleteBtn").disabled=!has; $("#nextApplicantBtn").disabled=pending().length<2; const e=$("#readonlyEditApplicantBtn"); if(e)e.disabled=!has;}
-function renderReadonlyCard(id){const box=$("#readonlyCard"); const a=stateRef.applicants.find(x=>x.applicant_id===id); if(!a){box.innerHTML='<div class="empty">Select applicant to view copy-ready details.</div>'; return;} const d=buildReadonly(a,stateRef.people); const name=d.applicant_name||"Applicant"; const phone=onlyDigits(d["Phone Number"]); const aad=onlyDigits(d["Aadhaar Number"]); box.innerHTML=`<div class="read-card enhanced-read-card"><h3>${esc(name)}</h3><div class="copy-help">Click on text to copy</div>${photoDownloadBlock(a,name)}<section class="read-section"><div class="copy-table-grid two-cols">${readCell("EPIC ID",d["EPIC ID"])}${readCell("Phone Number",phone)}</div></section><section class="read-section"><h4>Mapping Details</h4><div class="copy-table-grid two-cols">${readCell("Type",d["Mapping Type"],false)}${readCell("Relationship",d["Mapping Relation"],false)}</div><div class="copy-table-grid two-cols">${readCell("State",d["Mapping State"],false)}${readCell("District",d["Mapping District"],false)}</div><div class="copy-table-grid three-cols">${readCell("AC No",d["Mapping AC No Display"],false)}${readCell("Part No",d["Mapping Part No"],false)}${readCell("Sl No",d["Mapping Serial No"],false)}</div><div class="copy-table-grid four-cols">${readCell("Mapper Name",d["Mapper Name as per 2002"]||d["Mapping Name"],false)}${readCell("2002 EPIC Number",d["Mapper 2002 EPIC Number"],false)}${readCell("Relative",d["Mapper Relative Name"],false)}${readCell("Relation with Relative",d["Mapper Relationship with Relative"],false)}</div></section><section class="read-section"><h4>Applicant Details</h4><div class="copy-table-grid two-cols">${readCell("Date of Birth",dmy(d["Date of Birth"]))}${readCell("Aadhaar Number",aad,true,formatAadhaar(aad))}</div><h5>Father</h5><div class="copy-table-grid two-cols">${readCell("Name",d["Father’s Name"])}${readCell("EPIC Number",d["Father’s EPIC Number"])}</div><h5>Mother</h5><div class="copy-table-grid two-cols">${readCell("Name",d["Mother’s Name"])}${readCell("EPIC Number",d["Mother’s EPIC Number"])}</div><h5>Spouse</h5><div class="copy-table-grid two-cols">${readCell("Name",d["Spouse’s Name"])}${readCell("EPIC Number",d["Spouse’s EPIC Number"])}</div></section></div>`; box.querySelectorAll("[data-copy]").forEach(n=>{n.addEventListener("click",()=>copyText(n.dataset.copy)); n.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();copyText(n.dataset.copy);}});});}
+function photoDownloadBlock(applicant, name) {
+  if (!onlyValidPhoto(applicant.photo_data)) return "";
+  return `<section class="read-section photo-read-section"><h4>Applicant Photo</h4><div class="readonly-photo-box"><img class="readonly-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download Photo</a></div></section>`;
+}
 
-function addInput(parent,label,key,value="",type="text",required=false){const wrap=el("label",{class:"stacked"}); const sp=el("span",{text:label,class:required?"required":""}); const input=el("input",{type,value,autocomplete:"off","data-field":key}); input.required=required; wrap.append(sp,input); parent.append(wrap); return input;}
-function addCheck(parent,label,checked=false){const wrap=el("label",{class:"checkbox-line"}); const i=el("input",{type:"checkbox"}); i.checked=checked; wrap.append(i,el("span",{text:label})); parent.append(wrap); return i;}
-function options({filter=null,exclude=new Set(),add=true,blank=true,force=[]}={}){const forced=force.map(id=>stateRef.people.find(p=>p.person_id===id)).filter(Boolean); const fids=new Set(forced.map(p=>p.person_id)); const list=stateRef.people.filter(p=>!fids.has(p.person_id)).filter(p=>!filter||filter(p)).filter(p=>!exclude.has(p.person_id)).sort((a,b)=>a.name.localeCompare(b.name)); return (blank?'<option value="">Select</option>':'')+(add?`<option value="${ADD_NEW}">Add New</option>`:'')+forced.concat(list).map(p=>`<option value="${esc(p.person_id)}">${esc(p.name)}${p.epic_number?" — "+esc(p.epic_number):""}${has2002Details(p)?" — 2002":""}</option>`).join("");}
-function addPeopleSelect(parent,label,value,opts={}){const wrap=el("label",{class:"stacked"}); wrap.append(el("span",{text:label,class:opts.required?"required":""})); const s=el("select"); s.innerHTML=options(opts); s.value=value||""; wrap.append(s); parent.append(wrap); return s;}
-function disableSelect(s,yes){s.disabled=!!yes; s.closest("label")?.classList.toggle("disabled-field",!!yes);}
-function keep(s,v){if(v&&[...s.options].some(o=>o.value===v))s.value=v;}
+function readCell(label, value, copy = true, display = value) {
+  const cleanValue = clean(value);
+  return `<div class="copy-table-cell ${copy ? "" : "no-copy"}" ${copy ? `role="button" tabindex="0" data-copy="${esc(cleanValue)}"` : ""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div></div>`;
+}
 
-function openPersonModal({personId="",fromApplicant=false,fromMapper=false,onSaved=null}={}){const existing=stateRef.people.find(p=>p.person_id===personId); const draft=existing?{...existing}:blankPerson(); const form=el("form",{autocomplete:"off"}); const err=el("div",{class:"error-box"}); const g=el("div",{class:"form-grid"}); const name=addInput(g,"Name","name",draft.name,"text",true); const epic=addInput(g,"EPIC Number","epic",draft.epic_number,"text",fromApplicant); epic.addEventListener("input",()=>epic.value=normalizeEpic(epic.value)); const nonstd=addCheck(g,"Allow non-standard EPIC",draft.allow_nonstandard_epic); const is2002=addCheck(g,"2002 list details available",fromMapper?true:draft.is_2002_available); if(fromMapper){is2002.checked=true; is2002.disabled=true;} const dbox=el("fieldset",{class:"details-2002"}); dbox.append(el("legend",{text:"2002 Details"})); const st=addInput(dbox,"State","state",draft.state_2002,"text",fromMapper); const dist=addInput(dbox,"District","district",draft.district_2002,"text",fromMapper); const ac=addInput(dbox,"AC No","ac",draft.ac_no_2002,"text",fromMapper); const part=addInput(dbox,"Part No","part",draft.part_no_2002,"text",fromMapper); const sl=addInput(dbox,"Sl No","sl",draft.sl_no_2002,"text",fromMapper); const acn=addInput(dbox,"AC name","acn",draft.ac_name_2002); const n2002=addInput(dbox,"Name as per 2002","n2002",draft.name_as_per_2002); const reln=addInput(dbox,"Relative name","reln",draft.relative_name_2002); const relr=addInput(dbox,"Relationship with relative","relr",draft.relative_relationship_2002); const e2002=addInput(dbox,"2002 EPIC number","e2002",draft.epic_number_2002); e2002.addEventListener("input",()=>e2002.value=normalizeEpic(e2002.value)); function sync(){dbox.hidden=!is2002.checked;} is2002.addEventListener("change",sync); sync(); const actions=el("div",{class:"modal-actions"}); const cancel=el("button",{type:"button",class:"secondary",text:"Cancel"}); const save=el("button",{type:"submit",text:"Save Person"}); actions.append(cancel,save); form.append(err,g,dbox,actions); const back=openModal(existing?"Edit Person":"Add Person",form); cancel.addEventListener("click",()=>closeModal(back)); form.addEventListener("submit",e=>{e.preventDefault(); const p=normalizePerson({...draft,name:name.value,epic_number:epic.value,allow_nonstandard_epic:nonstd.checked,is_2002_available:is2002.checked,state_2002:st.value,district_2002:dist.value,ac_no_2002:ac.value,part_no_2002:part.value,sl_no_2002:sl.value,ac_name_2002:acn.value,name_as_per_2002:n2002.value,relative_name_2002:reln.value,relative_relationship_2002:relr.value,epic_number_2002:e2002.value}); const errors=validatePerson(p,{requireEpic:fromApplicant}); showErrors(err,errors); if(errors.length)return; const i=stateRef.people.findIndex(x=>x.person_id===p.person_id); if(i>=0)stateRef.people[i]=p; else stateRef.people.push(p); commitRef(); renderAll(); closeModal(back); toast("Person saved."); onSaved?.(fromMapper&&!has2002Details(p)?null:p,p);});}
+async function copyText(value) {
+  try {
+    await navigator.clipboard.writeText(clean(value));
+  } catch {
+    const temp = document.createElement("textarea");
+    temp.value = clean(value);
+    document.body.append(temp);
+    temp.select();
+    document.execCommand("copy");
+    temp.remove();
+  }
+  toast("Copied.");
+}
 
-async function editPhoto(file){const img=await new Promise((res,rej)=>{if(!file||!file.type.startsWith("image/"))return rej(new Error("Please choose an image file.")); const u=URL.createObjectURL(file); const im=new Image; im.onload=()=>{URL.revokeObjectURL(u);res(im);}; im.onerror=()=>{URL.revokeObjectURL(u);rej(new Error("Could not load photo."));}; im.src=u;}); const settings={zoom:1,x:0,y:0,bg:false}; const body=el("div",{class:"photo-editor-body"}); const canvas=el("canvas",{class:"photo-crop-canvas",width:"270",height:"360"}); const ctr=el("div",{class:"photo-editor-controls",html:'<label class="stacked">Zoom <input type="range" min="1" max="3" step="0.01" value="1" data-z></label><label class="stacked">Move Left / Right <input type="range" min="-100" max="100" value="0" data-x></label><label class="stacked">Move Up / Down <input type="range" min="-100" max="100" value="0" data-y></label><button type="button" class="secondary" data-bg>Remove background + white background</button><div class="message">Photo will be attached to this applicant popup in 3:4 ratio and compressed below 1.8 MB. Click Save Applicant after using the photo.</div>'}); body.append(canvas,ctr); const actions=el("div",{class:"modal-actions"}); const cancel=el("button",{type:"button",class:"secondary",text:"Cancel"}); const use=el("button",{type:"button",text:"Use Photo"}); actions.append(cancel,use); const back=openModal("Edit Applicant Photo",el("div",{},[body,actions])); function draw(out=canvas,w=270,h=360){out.width=w; out.height=h; const ctx=out.getContext("2d",{willReadFrequently:settings.bg}); ctx.fillStyle="#fff"; ctx.fillRect(0,0,w,h); const ratio=.75; const ch=Math.min(img.height/settings.zoom,img.width/ratio/settings.zoom); const cw=ch*ratio; const bx=(img.width-cw)/2, by=(img.height-ch)/2; const sx=Math.max(0,Math.min(img.width-cw,bx+bx*settings.x/100)); const sy=Math.max(0,Math.min(img.height-ch,by+by*settings.y/100)); ctx.drawImage(img,sx,sy,cw,ch,0,0,w,h); if(settings.bg){const data=ctx.getImageData(0,0,w,h),d=data.data,c=[d[0],d[1],d[2]]; for(let i=0;i<d.length;i+=4){const diff=Math.abs(d[i]-c[0])+Math.abs(d[i+1]-c[1])+Math.abs(d[i+2]-c[2]); const bright=d[i]>185&&d[i+1]>185&&d[i+2]>185; if(diff<95||bright){d[i]=d[i+1]=d[i+2]=255;d[i+3]=255;}} ctx.putImageData(data,0,0);} return out;} draw(); ctr.querySelector("[data-z]").oninput=e=>{settings.zoom=+e.target.value||1;draw();}; ctr.querySelector("[data-x]").oninput=e=>{settings.x=+e.target.value||0;draw();}; ctr.querySelector("[data-y]").oninput=e=>{settings.y=+e.target.value||0;draw();}; ctr.querySelector("[data-bg]").onclick=e=>{settings.bg=!settings.bg;e.currentTarget.classList.toggle("danger",settings.bg);draw();}; const toBlob=(c,q)=>new Promise(r=>c.toBlob(r,"image/jpeg",q)); const dataUrl=b=>new Promise(r=>{const fr=new FileReader;fr.onload=()=>r(fr.result);fr.readAsDataURL(b);}); return new Promise((res,rej)=>{cancel.onclick=()=>{closeModal(back);rej(new Error("Photo cancelled."));}; use.onclick=async()=>{try{let c=draw(document.createElement("canvas"),900,1200),blob; for(const q of [.9,.82,.74,.66,.58]){blob=await toBlob(c,q); if(blob&&blob.size<=MAX_PHOTO_BYTES)break;} if(!blob||blob.size>MAX_PHOTO_BYTES){c=draw(document.createElement("canvas"),720,960); blob=await toBlob(c,.62);} if(!blob||blob.size>MAX_PHOTO_BYTES)throw new Error("Could not compress photo below 1.8 MB."); const url=await dataUrl(blob); closeModal(back);res(url);}catch(e){rej(e);}};});}
+function renderPeople() {
+  const wrap = $("#peopleTableWrap");
+  if (!stateRef.people.length) {
+    wrap.innerHTML = `<div class="empty">No people saved yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table><thead><tr><th>Name</th><th>EPIC</th><th>2002 Details</th><th>Actions</th></tr></thead><tbody>${stateRef.people.map(person => `<tr><td>${esc(person.name)}</td><td>${esc(person.epic_number)}</td><td>${person.is_2002_available ? `<span class="badge">Yes</span><br>${esc(person.state_2002)}, ${esc(person.district_2002)}<br>AC ${esc(person.ac_no_2002)}${person.ac_name_2002 ? "-" + esc(person.ac_name_2002) : ""}, Part ${esc(person.part_no_2002)}, Sl ${esc(person.sl_no_2002)}` : "No"}</td><td><div class="row-actions"><button class="small secondary" data-edit-person="${esc(person.person_id)}">Edit</button><button class="small danger" data-delete-person="${esc(person.person_id)}">Delete</button></div></td></tr>`).join("")}</tbody></table>`;
+  wrap.querySelectorAll("[data-delete-person]").forEach(button => {
+    button.addEventListener("click", () => deletePerson(button.dataset.deletePerson));
+  });
+}
 
-function openApplicantModal(id=""){const existing=stateRef.applicants.find(a=>a.applicant_id===id); const draft=existing?{...existing}:blankApplicant(); const form=el("form",{autocomplete:"off"}); const err=el("div",{class:"error-box"}); const g=el("div",{class:"form-grid"}); const used=new Set(stateRef.applicants.filter(a=>a.applicant_id!==draft.applicant_id).map(a=>a.person_id)); const applicant=addPeopleSelect(g,"Applicant Name",draft.person_id,{add:true,blank:true,required:true,filter:hasEpic,exclude:used}); const relWrap=el("label",{class:"stacked"}); relWrap.append(el("span",{text:"Mapper Relationship",class:"required"})); const rel=el("select"); rel.innerHTML='<option value="">Select</option>'+RELATIONSHIPS.map(r=>`<option value="${r}">${r}</option>`).join(""); rel.value=draft.mapper_relationship||""; relWrap.append(rel); g.append(relWrap); const mapper=addPeopleSelect(g,"Mapper Name",draft.mapper_person_id,{add:true,required:true,filter:has2002Details}); const phone=addInput(g,"Phone Number","phone",draft.phone_number,"tel",true); phone.inputMode="numeric"; phone.maxLength=10; phone.oninput=()=>phone.value=onlyDigits(phone.value).slice(0,10); const aad=addInput(g,"Aadhaar Number","aadhaar",formatAadhaar(draft.aadhaar_number),"text",true); aad.inputMode="numeric"; aad.maxLength=14; aad.oninput=()=>aad.value=formatAadhaar(aad.value); const dob=addInput(g,"Date of Birth","dob",draft.date_of_birth,"date",true); const father=addPeopleSelect(g,"Father",draft.father_person_id,{add:true,required:true}); const mother=addPeopleSelect(g,"Mother",draft.mother_person_id,{add:true,required:true}); const spouse=addPeopleSelect(g,"Spouse",draft.spouse_person_id,{add:true}); let photo=draft.photo_data||""; const pw=el("div",{class:"stacked photo-field"}); pw.append(el("span",{text:"Applicant Photo (optional)"})); const pi=el("input",{type:"file",accept:"image/*"}); const prev=el("img",{class:"photo-preview",alt:"Applicant photo preview"}); const rm=el("button",{type:"button",class:"small secondary",text:"Remove Photo"}); function syncPhoto(){prev.hidden=!photo; rm.hidden=!photo; if(photo)prev.src=photo; else prev.removeAttribute("src");} pi.onchange=async()=>{const f=pi.files?.[0]; if(!f)return; try{photo=await editPhoto(f); syncPhoto(); toast("Photo added to popup. Click Save Applicant to save.");}catch(e){if(e.message!=="Photo cancelled.")toast(e.message||"Could not add photo.");}finally{pi.value="";}}; rm.onclick=()=>{photo="";syncPhoto();}; pw.append(pi,prev,rm); g.append(pw); syncPhoto(); const actions=el("div",{class:"modal-actions"}); const cancel=el("button",{type:"button",class:"secondary",text:"Cancel"}); const save=el("button",{type:"submit",text:"Save Applicant"}); actions.append(cancel,save); form.append(err,g,actions); const back=openModal(existing?"Edit Applicant":"Add Applicant",form); cancel.onclick=()=>closeModal(back); const selects=[applicant,mapper,father,mother,spouse]; function refresh(){const old={applicant:applicant.value,mapper:mapper.value,father:father.value,mother:mother.value,spouse:spouse.value}; applicant.innerHTML=options({filter:hasEpic,exclude:used,force:old.applicant?[old.applicant]:[]}); keep(applicant,old.applicant); if(rel.value==="Self"){mapper.innerHTML=options({add:false,blank:false,force:applicant.value?[applicant.value]:[]}); mapper.value=applicant.value||""; disableSelect(mapper,true);} else {mapper.innerHTML=options({filter:has2002Details,force:old.mapper?[old.mapper]:[]}); keep(mapper,old.mapper); disableSelect(mapper,false);} father.innerHTML=options({force:old.father?[old.father]:[]}); mother.innerHTML=options({force:old.mother?[old.mother]:[]}); spouse.innerHTML=options({force:old.spouse?[old.spouse]:[]}); keep(father,old.father); keep(mother,old.mother); keep(spouse,old.spouse); if(rel.value==="Father"&&mapper.value){father.innerHTML=options({add:false,blank:false,force:[mapper.value]}); father.value=mapper.value; disableSelect(father,true);} else disableSelect(father,false); if(rel.value==="Mother"&&mapper.value){mother.innerHTML=options({add:false,blank:false,force:[mapper.value]}); mother.value=mapper.value; disableSelect(mother,true);} else disableSelect(mother,false);} function handleAdd(sel,opts={}){if(sel.value!==ADD_NEW)return; sel.value=""; openPersonModal({...opts,onSaved:p=>{if(p){refresh(); sel.value=p.person_id; refresh();}}});} selects.forEach(s=>s.onchange=()=>{handleAdd(s,{fromApplicant:s===applicant,fromMapper:s===mapper}); refresh();}); rel.onchange=refresh; refresh(); form.onsubmit=e=>{e.preventDefault(); const a=normalizeApplicant({...draft,person_id:applicant.value,mapper_person_id:mapper.value,mapper_relationship:rel.value,phone_number:phone.value,aadhaar_number:aad.value,date_of_birth:dob.value,father_person_id:father.value,mother_person_id:mother.value,spouse_person_id:spouse.value,photo_data:photo}); const result=validateApplicant(a,stateRef.people,stateRef.applicants,a.applicant_id); showErrors(err,result.errors); if(result.errors.length)return; if(result.duplicateAadhaarApplicant&&!confirm("Another applicant has the same Aadhaar number. Save anyway?"))return; const i=stateRef.applicants.findIndex(x=>x.applicant_id===a.applicant_id); if(i>=0)stateRef.applicants[i]=a; else stateRef.applicants.push(a); commitRef(); renderAll(); closeModal(back); toast("Applicant saved.");};}
-function deletePerson(id){const refs=personReferences(id,stateRef.applicants); if(refs.length)return toast("Cannot delete: person is used in applicants."); if(confirm(`Delete person ${pname(id)}?`)){stateRef.people=stateRef.people.filter(p=>p.person_id!==id); commitRef(); renderAll();}}
-function deleteApplicant(id){if(confirm(`Delete applicant ${pname(stateRef.applicants.find(a=>a.applicant_id===id)?.person_id)}?`)){stateRef.applicants=stateRef.applicants.filter(a=>a.applicant_id!==id); commitRef(); renderAll();}}
-function selectNext(id=""){const rows=pending(),s=$("#readonlyApplicantSelect"); if(!rows.length){s.dataset.selected=""; renderReadonlyPicker(); return toast("All applicants completed.");} const i=rows.findIndex(a=>a.applicant_id===id); s.dataset.selected=rows[i>=0?(i+1)%rows.length:0].applicant_id; renderReadonlyPicker();}
-function markComplete(){const id=$("#readonlyApplicantSelect").value; const a=stateRef.applicants.find(a=>a.applicant_id===id); if(a){a.status_completed=true; commitRef(); renderApplicants(); selectNext(id);}}
+function renderApplicants() {
+  const wrap = $("#applicantTableWrap");
+  if (!stateRef.applicants.length) {
+    wrap.innerHTML = `<div class="empty">No applicants saved yet.</div>`;
+    return;
+  }
+  wrap.innerHTML = `<table><thead><tr><th>Applicant</th><th>DOB</th><th>Mapper</th><th>Relation</th><th>Phone</th><th>Aadhaar</th><th>Status</th><th>Actions</th></tr></thead><tbody>${stateRef.applicants.map(applicant => `<tr><td>${esc(personName(applicant.person_id))}<br><small>${esc(personEpic(applicant.person_id))}</small></td><td>${esc(dmy(applicant.date_of_birth))}</td><td>${esc(personName(applicant.mapper_person_id))}</td><td>${esc(applicant.mapper_relationship)}</td><td>${/^\d{10}$/.test(applicant.phone_number) ? `<a href="https://wa.me/91${esc(applicant.phone_number)}?text=${encodeURIComponent("SIR acknowledgement")}" target="_blank" rel="noopener">${esc(applicant.phone_number)}</a>` : esc(applicant.phone_number)}</td><td>${esc(formatAadhaar(applicant.aadhaar_number))}</td><td><label class="checkbox-line compact"><input type="checkbox" data-toggle-status="${esc(applicant.applicant_id)}" ${applicant.status_completed ? "checked" : ""}><span>${applicant.status_completed ? "Completed" : "Pending"}</span></label></td><td><div class="row-actions"><button class="small secondary" data-edit-applicant="${esc(applicant.applicant_id)}">Edit</button><button class="small danger" data-delete-applicant="${esc(applicant.applicant_id)}">Delete</button></div></td></tr>`).join("")}</tbody></table>`;
 
-function relIds(a){return [a.person_id,a.mapper_person_id,a.father_person_id,a.mother_person_id,a.spouse_person_id].filter(Boolean);}
-function lockedPeople(source,appIds){const set=new Set(appIds), ids=new Set; source.applicants.forEach(a=>{if(set.has(a.applicant_id))relIds(a).forEach(id=>ids.add(id));}); return ids;}
-function filtered(source,appIds,personIds=[]){const apps=new Set(appIds), people=new Set(personIds); const aa=source.applicants.filter(a=>apps.has(a.applicant_id)); aa.forEach(a=>relIds(a).forEach(id=>people.add(id))); return {people:source.people.filter(p=>people.has(p.person_id)),applicants:aa};}
-function selectionModal({title,actionLabel,source,includePeople,onConfirm}){const selectedApps=new Set(source.applicants.map(a=>a.applicant_id)), manual=new Set(includePeople?source.people.map(p=>p.person_id):[]); const body=el("div",{class:"selection-modal-content"}); const back=openModal(title,body); function render(){const locked=includePeople?lockedPeople(source,selectedApps):new Set; const all=source.applicants.every(a=>selectedApps.has(a.applicant_id))&&(!includePeople||source.people.every(p=>locked.has(p.person_id)||manual.has(p.person_id))); body.innerHTML=`<div class="selection-summary">Select records to use. Related people are checked and locked.</div><label class="checkbox-line selection-master"><input type="checkbox" data-all ${all?"checked":""}><span>Select all / Unselect all</span></label><div class="selection-lists ${includePeople?"with-people":""}"><section class="selection-group"><h4>Applicants</h4>${source.applicants.map(a=>`<label class="selection-item"><input type="checkbox" data-app="${a.applicant_id}" ${selectedApps.has(a.applicant_id)?"checked":""}><span>${esc((source.people.find(p=>p.person_id===a.person_id)||{}).name||"Unnamed applicant")}<small>${esc((source.people.find(p=>p.person_id===a.person_id)||{}).epic_number||"")}</small></span></label>`).join("")||'<div class="empty">No applicants.</div>'}</section>${includePeople?`<section class="selection-group"><h4>People Data</h4>${source.people.map(p=>{const l=locked.has(p.person_id), c=l||manual.has(p.person_id); return `<label class="selection-item ${l?"disabled":""}"><input type="checkbox" data-person="${p.person_id}" ${c?"checked":""} ${l?"disabled":""}><span>${esc(p.name||"Unnamed person")}<small>${esc(p.epic_number||p.epic_number_2002||"")}${l?" — required by selected applicant":""}</small></span></label>`;}).join("")||'<div class="empty">No people.</div>'}</section>`:""}</div><div class="selection-actions"><button type="button" class="secondary" data-cancel>Cancel</button><button type="button" data-ok>${esc(actionLabel)}</button></div>`; body.querySelector("[data-all]").onchange=e=>{selectedApps.clear();manual.clear(); if(e.target.checked){source.applicants.forEach(a=>selectedApps.add(a.applicant_id)); if(includePeople)source.people.forEach(p=>manual.add(p.person_id));} render();}; body.querySelectorAll("[data-app]").forEach(i=>i.onchange=e=>{e.target.checked?selectedApps.add(i.dataset.app):selectedApps.delete(i.dataset.app); render();}); body.querySelectorAll("[data-person]").forEach(i=>i.onchange=e=>{e.target.checked?manual.add(i.dataset.person):manual.delete(i.dataset.person); render();}); body.querySelector("[data-cancel]").onclick=()=>closeModal(back); body.querySelector("[data-ok]").onclick=()=>{const lp=includePeople?lockedPeople(source,selectedApps):new Set, persons=new Set([...manual,...lp]); if(!selectedApps.size&&!persons.size)return toast("Select at least one record."); closeModal(back); onConfirm([...selectedApps],[...persons]);};} render();}
-function exportSelection(){selectionModal({title:"Export JSON",actionLabel:"Export JSON",source:stateRef,includePeople:true,onConfirm:(a,p)=>{const s=filtered(stateRef,a,p); const blob=new Blob([JSON.stringify({people_database:s.people,applicant_database:s.applicants},null,2)],{type:"application/json"}); const link=document.createElement("a"); link.href=URL.createObjectURL(blob); link.download=`${sirFileBaseFromState(s)}.json`; link.click(); URL.revokeObjectURL(link.href);}});}
-async function importSelection(file){if(!file)return; try{const imp=await parseImportFile(file); selectionModal({title:"Import JSON",actionLabel:"Import Selected",source:imp,includePeople:true,onConfirm:(a,p)=>{backupState(stateRef); const s=filtered(imp,a,p); const people=new Map(stateRef.people.map(x=>[x.person_id,x])); s.people.forEach(x=>people.set(x.person_id,x)); const apps=new Map(stateRef.applicants.map(x=>[x.applicant_id,x])); s.applicants.forEach(x=>apps.set(x.applicant_id,x)); stateRef.people=[...people.values()]; stateRef.applicants=[...apps.values()]; commitRef(); renderAll(); toast("Selected data imported.");}});}catch(e){alert(e.message||"Import failed.");}finally{$("#importJsonInput").value="";}}
-function pdfSelection(offline){selectionModal({title:offline?"Offline Form PDF":"Online Form PDF",actionLabel:offline?"Create Offline PDF":"Create Online PDF",source:stateRef,includePeople:false,onConfirm:a=>{const s=filtered(stateRef,a,stateRef.people.map(p=>p.person_id)); s.applicants=s.applicants.map(x=>({...x,export_to_pdf:true})); offline?generateOfflinePdf(s):generatePdf(s);}});}
-function clearAll(){if(confirm("Before clearing, export a JSON backup now? Press OK to export, Cancel to continue without exporting."))downloadJson(stateRef); if(confirm("Clear all people and applicants from this device? This cannot be undone unless you have a JSON backup.")){backupState(stateRef); stateRef.people=[]; stateRef.applicants=[]; clearState(); renderAll(); toast("All data cleared. A local backup was stored.");}}
-function initTabs(){$$("[data-tab-target]").forEach(b=>b.onclick=()=>{$$(".tab-btn").forEach(x=>x.classList.toggle("active",x===b)); $$(".tab-panel").forEach(p=>p.classList.toggle("active",p.id===b.dataset.tabTarget));});}
-function initZoom(){const key="sir_family_forms_zoom"; const apply=v=>{v=Math.min(1.3,Math.max(.8,Number(v)||1)); document.documentElement.style.setProperty("--app-zoom",v); localStorage.setItem(key,v);}; apply(localStorage.getItem(key)||1); $("#zoomOutBtn")?.addEventListener("click",()=>apply((Number(localStorage.getItem(key)||1)-.1).toFixed(2))); $("#zoomResetBtn")?.addEventListener("click",()=>apply(1)); $("#zoomInBtn")?.addEventListener("click",()=>apply((Number(localStorage.getItem(key)||1)+.1).toFixed(2)));}
-function addVersion(){if($("#appVersionBadge"))return; const b=el("div",{id:"appVersionBadge",text:"Version 26-07-06"}); document.body.append(b);}
+  wrap.querySelectorAll("[data-delete-applicant]").forEach(button => {
+    button.addEventListener("click", () => deleteApplicant(button.dataset.deleteApplicant));
+  });
+  wrap.querySelectorAll("[data-toggle-status]").forEach(input => {
+    input.addEventListener("change", () => {
+      const applicant = stateRef.applicants.find(row => row.applicant_id === input.dataset.toggleStatus);
+      if (!applicant) return;
+      applicant.status_completed = input.checked;
+      commitRef();
+      renderReadonlyPicker();
+    });
+  });
+}
 
-export function initUI(state,commit){stateRef=state; commitRef=commit; initTabs(); initZoom(); addVersion(); $("#addPersonBtn").onclick=()=>openPersonModal(); $("#addApplicantBtn").onclick=()=>openApplicantModal(); $("#readonlyNewApplicantBtn").onclick=()=>openApplicantModal(); $("#readonlyEditApplicantBtn").onclick=()=>{const id=$("#readonlyApplicantSelect").value; if(!id)return toast("Select an applicant first."); openApplicantModal(id);}; $("#exportJsonBtn").onclick=exportSelection; $("#importJsonInput").onchange=e=>importSelection(e.target.files[0]); $("#generatePdfBtn").onclick=()=>pdfSelection(false); $("#offlinePdfBtn").onclick=()=>pdfSelection(true); $("#clearDataBtn").onclick=clearAll; $("#readonlyApplicantSelect").onchange=e=>{e.target.dataset.selected=e.target.value; renderReadonlyCard(e.target.value); syncReadonlyButtons();}; $("#markCompleteBtn").onclick=markComplete; $("#nextApplicantBtn").onclick=()=>selectNext($("#readonlyApplicantSelect").value); renderAll();}
+function renderAll() {
+  renderPeople();
+  renderApplicants();
+  renderReadonlyPicker();
+}
+
+function pendingApplicants() {
+  return stateRef.applicants.filter(applicant => !applicant.status_completed);
+}
+
+function renderReadonlyPicker() {
+  const select = $("#readonlyApplicantSelect");
+  const rows = pendingApplicants();
+  select.innerHTML = `<option value="">Select applicant</option>` + rows.map(applicant => `<option value="${esc(applicant.applicant_id)}">${esc(personName(applicant.person_id) || "Unnamed applicant")}</option>`).join("");
+  const previous = select.dataset.selected || "";
+  select.value = rows.some(applicant => applicant.applicant_id === previous) ? previous : (rows[0]?.applicant_id || "");
+  select.dataset.selected = select.value;
+  renderReadonlyCard(select.value);
+  syncReadonlyButtons();
+}
+
+function syncReadonlyButtons() {
+  const hasSelection = Boolean($("#readonlyApplicantSelect")?.value);
+  $("#markCompleteBtn").disabled = !hasSelection;
+  $("#nextApplicantBtn").disabled = pendingApplicants().length < 2;
+  const edit = $("#readonlyEditApplicantBtn");
+  if (edit) edit.disabled = !hasSelection;
+}
+
+function renderReadonlyCard(applicantId) {
+  const box = $("#readonlyCard");
+  const applicant = stateRef.applicants.find(row => row.applicant_id === applicantId);
+  if (!applicant) {
+    box.innerHTML = `<div class="empty">Select applicant to view copy-ready details.</div>`;
+    return;
+  }
+  const data = buildReadonly(applicant, stateRef.people);
+  const name = data.applicant_name || "Applicant";
+  const phone = onlyDigits(data["Phone Number"]);
+  const aadhaar = onlyDigits(data["Aadhaar Number"]);
+  box.innerHTML = `<div class="read-card enhanced-read-card"><h3>${esc(name)}</h3><div class="copy-help">Click on text to copy</div>${photoDownloadBlock(applicant, name)}<section class="read-section"><div class="copy-table-grid two-cols">${readCell("EPIC ID", data["EPIC ID"])}${readCell("Phone Number", phone)}</div></section><section class="read-section"><h4>Mapping Details</h4><div class="copy-table-grid two-cols">${readCell("Type", data["Mapping Type"], false)}${readCell("Relationship", data["Mapping Relation"], false)}</div><div class="copy-table-grid two-cols">${readCell("State", data["Mapping State"], false)}${readCell("District", data["Mapping District"], false)}</div><div class="copy-table-grid three-cols">${readCell("AC No", data["Mapping AC No Display"], false)}${readCell("Part No", data["Mapping Part No"], false)}${readCell("Sl No", data["Mapping Serial No"], false)}</div><div class="copy-table-grid four-cols">${readCell("Mapper Name", data["Mapper Name as per 2002"] || data["Mapping Name"], false)}${readCell("2002 EPIC Number", data["Mapper 2002 EPIC Number"], false)}${readCell("Relative", data["Mapper Relative Name"], false)}${readCell("Relation with Relative", data["Mapper Relationship with Relative"], false)}</div></section><section class="read-section"><h4>Applicant Details</h4><div class="copy-table-grid two-cols">${readCell("Date of Birth", dmy(data["Date of Birth"]))}${readCell("Aadhaar Number", aadhaar, true, formatAadhaar(aadhaar))}</div><h5>Father</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Father’s Name"])}${readCell("EPIC Number", data["Father’s EPIC Number"])}</div><h5>Mother</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Mother’s Name"])}${readCell("EPIC Number", data["Mother’s EPIC Number"])}</div><h5>Spouse</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Spouse’s Name"])}${readCell("EPIC Number", data["Spouse’s EPIC Number"])}</div></section></div>`;
+  box.querySelectorAll("[data-copy]").forEach(node => {
+    node.addEventListener("click", () => copyText(node.dataset.copy));
+    node.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        copyText(node.dataset.copy);
+      }
+    });
+  });
+}
+
+function deletePerson(personId) {
+  const used = stateRef.applicants.some(applicant => [applicant.person_id, applicant.mapper_person_id, applicant.father_person_id, applicant.mother_person_id, applicant.spouse_person_id].filter(Boolean).includes(personId));
+  if (used) {
+    toast("Cannot delete: person is used in applicants.");
+    return;
+  }
+  if (!confirm(`Delete person ${personName(personId)}?`)) return;
+  stateRef.people = stateRef.people.filter(person => person.person_id !== personId);
+  commitRef();
+  renderAll();
+}
+
+function deleteApplicant(applicantId) {
+  const applicant = stateRef.applicants.find(row => row.applicant_id === applicantId);
+  if (!confirm(`Delete applicant ${personName(applicant?.person_id)}?`)) return;
+  stateRef.applicants = stateRef.applicants.filter(row => row.applicant_id !== applicantId);
+  commitRef();
+  renderAll();
+}
+
+function selectNext(currentId = "") {
+  const rows = pendingApplicants();
+  const select = $("#readonlyApplicantSelect");
+  if (!rows.length) {
+    select.dataset.selected = "";
+    renderReadonlyPicker();
+    toast("All applicants completed.");
+    return;
+  }
+  const index = rows.findIndex(applicant => applicant.applicant_id === currentId);
+  select.dataset.selected = rows[index >= 0 ? (index + 1) % rows.length : 0].applicant_id;
+  renderReadonlyPicker();
+}
+
+function markComplete() {
+  const id = $("#readonlyApplicantSelect").value;
+  const applicant = stateRef.applicants.find(row => row.applicant_id === id);
+  if (!applicant) return;
+  applicant.status_completed = true;
+  commitRef();
+  renderApplicants();
+  selectNext(id);
+}
+
+function relatedPersonIds(applicant) {
+  return [applicant.person_id, applicant.mapper_person_id, applicant.father_person_id, applicant.mother_person_id, applicant.spouse_person_id].filter(Boolean);
+}
+
+function lockedPeople(source, applicantIds) {
+  const selected = new Set(applicantIds);
+  const people = new Set();
+  source.applicants.forEach(applicant => {
+    if (selected.has(applicant.applicant_id)) relatedPersonIds(applicant).forEach(id => people.add(id));
+  });
+  return people;
+}
+
+function filteredState(source, applicantIds, personIds = []) {
+  const selectedApplicants = new Set(applicantIds);
+  const selectedPeople = new Set(personIds);
+  const applicants = source.applicants.filter(applicant => selectedApplicants.has(applicant.applicant_id));
+  applicants.forEach(applicant => relatedPersonIds(applicant).forEach(id => selectedPeople.add(id)));
+  return {
+    people: source.people.filter(person => selectedPeople.has(person.person_id)),
+    applicants
+  };
+}
+
+function selectionModal({ title, actionLabel, source, includePeople, onConfirm }) {
+  const selectedApplicants = new Set(source.applicants.map(applicant => applicant.applicant_id));
+  const manualPeople = new Set(includePeople ? source.people.map(person => person.person_id) : []);
+  const body = el("div", { class: "selection-modal-content" });
+  const backdrop = openModal(title, body);
+
+  function render() {
+    const locked = includePeople ? lockedPeople(source, selectedApplicants) : new Set();
+    const allSelected = source.applicants.every(applicant => selectedApplicants.has(applicant.applicant_id)) && (!includePeople || source.people.every(person => locked.has(person.person_id) || manualPeople.has(person.person_id)));
+    body.innerHTML = `<div class="selection-summary">Select records to use. Related people are checked and locked.</div><label class="checkbox-line selection-master"><input type="checkbox" data-all ${allSelected ? "checked" : ""}><span>Select all / Unselect all</span></label><div class="selection-lists ${includePeople ? "with-people" : ""}"><section class="selection-group"><h4>Applicants</h4>${source.applicants.map(applicant => `<label class="selection-item"><input type="checkbox" data-app="${esc(applicant.applicant_id)}" ${selectedApplicants.has(applicant.applicant_id) ? "checked" : ""}><span>${esc((source.people.find(person => person.person_id === applicant.person_id) || {}).name || "Unnamed applicant")}<small>${esc((source.people.find(person => person.person_id === applicant.person_id) || {}).epic_number || "")}</small></span></label>`).join("") || `<div class="empty">No applicants.</div>`}</section>${includePeople ? `<section class="selection-group"><h4>People Data</h4>${source.people.map(person => { const lockedItem = locked.has(person.person_id); const checked = lockedItem || manualPeople.has(person.person_id); return `<label class="selection-item ${lockedItem ? "disabled" : ""}"><input type="checkbox" data-person="${esc(person.person_id)}" ${checked ? "checked" : ""} ${lockedItem ? "disabled" : ""}><span>${esc(person.name || "Unnamed person")}<small>${esc(person.epic_number || person.epic_number_2002 || "")}${lockedItem ? " — required by selected applicant" : ""}</small></span></label>`; }).join("") || `<div class="empty">No people.</div>`}</section>` : ""}</div><div class="selection-actions"><button type="button" class="secondary" data-cancel>Cancel</button><button type="button" data-ok>${esc(actionLabel)}</button></div>`;
+
+    body.querySelector("[data-all]").addEventListener("change", event => {
+      selectedApplicants.clear();
+      manualPeople.clear();
+      if (event.target.checked) {
+        source.applicants.forEach(applicant => selectedApplicants.add(applicant.applicant_id));
+        if (includePeople) source.people.forEach(person => manualPeople.add(person.person_id));
+      }
+      render();
+    });
+    body.querySelectorAll("[data-app]").forEach(input => {
+      input.addEventListener("change", () => {
+        input.checked ? selectedApplicants.add(input.dataset.app) : selectedApplicants.delete(input.dataset.app);
+        render();
+      });
+    });
+    body.querySelectorAll("[data-person]").forEach(input => {
+      input.addEventListener("change", () => {
+        input.checked ? manualPeople.add(input.dataset.person) : manualPeople.delete(input.dataset.person);
+        render();
+      });
+    });
+    body.querySelector("[data-cancel]").addEventListener("click", () => closeModal(backdrop));
+    body.querySelector("[data-ok]").addEventListener("click", () => {
+      const lockedIds = includePeople ? lockedPeople(source, selectedApplicants) : new Set();
+      const people = new Set([...manualPeople, ...lockedIds]);
+      if (!selectedApplicants.size && !people.size) {
+        toast("Select at least one record.");
+        return;
+      }
+      closeModal(backdrop);
+      onConfirm([...selectedApplicants], [...people]);
+    });
+  }
+
+  render();
+}
+
+function exportSelection() {
+  selectionModal({
+    title: "Export JSON",
+    actionLabel: "Export JSON",
+    source: stateRef,
+    includePeople: true,
+    onConfirm: (applicantIds, personIds) => {
+      const selected = filteredState(stateRef, applicantIds, personIds);
+      const blob = new Blob([JSON.stringify({ people_database: selected.people, applicant_database: selected.applicants }, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `${sirFileBaseFromState(selected)}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+  });
+}
+
+async function importSelection(file) {
+  if (!file) return;
+  try {
+    const imported = await parseImportFile(file);
+    selectionModal({
+      title: "Import JSON",
+      actionLabel: "Import Selected",
+      source: imported,
+      includePeople: true,
+      onConfirm: (applicantIds, personIds) => {
+        backupState(stateRef);
+        const selected = filteredState(imported, applicantIds, personIds);
+        const people = new Map(stateRef.people.map(person => [person.person_id, person]));
+        selected.people.forEach(person => people.set(person.person_id, person));
+        const applicants = new Map(stateRef.applicants.map(applicant => [applicant.applicant_id, applicant]));
+        selected.applicants.forEach(applicant => applicants.set(applicant.applicant_id, applicant));
+        stateRef.people = [...people.values()];
+        stateRef.applicants = [...applicants.values()];
+        commitRef();
+        renderAll();
+        toast("Selected data imported.");
+      }
+    });
+  } catch (error) {
+    alert(error.message || "Import failed.");
+  } finally {
+    $("#importJsonInput").value = "";
+  }
+}
+
+function pdfSelection(offline) {
+  selectionModal({
+    title: offline ? "Offline Form PDF" : "Online Form PDF",
+    actionLabel: offline ? "Create Offline PDF" : "Create Online PDF",
+    source: stateRef,
+    includePeople: false,
+    onConfirm: applicantIds => {
+      const selected = filteredState(stateRef, applicantIds, stateRef.people.map(person => person.person_id));
+      selected.applicants = selected.applicants.map(applicant => ({ ...applicant, export_to_pdf: true }));
+      offline ? generateOfflinePdf(selected) : generatePdf(selected);
+    }
+  });
+}
+
+function clearAll() {
+  if (confirm("Before clearing, export a JSON backup now? Press OK to export, Cancel to continue without exporting.")) downloadJson(stateRef);
+  if (!confirm("Clear all people and applicants from this device? This cannot be undone unless you have a JSON backup.")) return;
+  backupState(stateRef);
+  stateRef.people = [];
+  stateRef.applicants = [];
+  clearState();
+  renderAll();
+  toast("All data cleared. A local backup was stored.");
+}
+
+function initTabs() {
+  $$('[data-tab-target]').forEach(button => {
+    button.addEventListener("click", () => {
+      $$(".tab-btn").forEach(tab => tab.classList.toggle("active", tab === button));
+      $$(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === button.dataset.tabTarget));
+    });
+  });
+}
+
+function initZoom() {
+  const key = "sir_family_forms_zoom";
+  const apply = value => {
+    const zoom = Math.min(1.3, Math.max(0.8, Number(value) || 1));
+    document.documentElement.style.setProperty("--app-zoom", zoom);
+    localStorage.setItem(key, zoom);
+  };
+  apply(localStorage.getItem(key) || 1);
+  $("#zoomOutBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) - 0.1).toFixed(2)));
+  $("#zoomResetBtn")?.addEventListener("click", () => apply(1));
+  $("#zoomInBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) + 0.1).toFixed(2)));
+}
+
+function addVersion() {
+  if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-06" }));
+}
+
+export function initUI(state, commit) {
+  stateRef = state;
+  commitRef = commit;
+  initTabs();
+  initZoom();
+  addVersion();
+  $("#exportJsonBtn").addEventListener("click", exportSelection);
+  $("#importJsonInput").addEventListener("change", event => importSelection(event.target.files[0]));
+  $("#generatePdfBtn").addEventListener("click", () => pdfSelection(false));
+  $("#offlinePdfBtn").addEventListener("click", () => pdfSelection(true));
+  $("#clearDataBtn").addEventListener("click", clearAll);
+  $("#readonlyApplicantSelect").addEventListener("change", event => {
+    event.target.dataset.selected = event.target.value;
+    renderReadonlyCard(event.target.value);
+    syncReadonlyButtons();
+  });
+  $("#markCompleteBtn").addEventListener("click", markComplete);
+  $("#nextApplicantBtn").addEventListener("click", () => selectNext($("#readonlyApplicantSelect").value));
+  renderAll();
+}
