@@ -1,6 +1,6 @@
 // Cache-first service worker for GitHub Pages project sites.
 // Increment this version when files change.
-const CACHE_NAME = "sir-family-forms-v21-github-pages";
+const CACHE_NAME = "sir-family-forms-v26-07-06";
 const BASE_URL = new URL("./", self.location);
 const INDEX_URL = new URL("./index.html", self.location).href;
 
@@ -8,12 +8,14 @@ const ASSET_PATHS = [
   "./",
   "./index.html",
   "./styles.css",
+  "./enhancements.css",
   "./core.js",
   "./storage.js",
   "./ui.js",
   "./pdf.js",
   "./importExport.js",
   "./app.js",
+  "./enhancements.js",
   "./manifest.json",
   "./service-worker.js",
   "./icon.png"
