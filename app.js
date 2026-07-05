@@ -3,6 +3,7 @@ import { loadState, saveState } from "./storage.js";
 import { initUI } from "./ui.js";
 import { normalizeApplicant, normalizePerson } from "./core.js";
 import { initPersonPopupOverrides } from "./popups/person-popup.js";
+import { initApplicantPopupOverrides } from "./popups/applicant-popup.js";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
@@ -34,3 +35,4 @@ if ("serviceWorker" in navigator) {
 commit(); // Save normalized/migrated structure.
 initUI(state, commit);
 initPersonPopupOverrides(state, commit);
+initApplicantPopupOverrides(state, commit);
