@@ -1,0 +1,85 @@
+<form class="person-popup-form" autocomplete="off">
+  <div class="error-box" data-error></div>
+
+  <div class="form-grid person-form-grid">
+    <label class="stacked">
+      <span class="required">Name (as per Aadhaar)</span>
+      <input name="name" type="text" autocomplete="off" required>
+    </label>
+
+    <label class="stacked">
+      <span data-epic-label>EPIC Number</span>
+      <div class="inline-input-row">
+        <input name="epic_number" type="text" autocomplete="off">
+        <label class="checkbox-line override-inline">
+          <input name="allow_nonstandard_epic" type="checkbox">
+          <span>Override</span>
+        </label>
+      </div>
+    </label>
+
+    <label class="checkbox-line">
+      <input name="is_2002_available" type="checkbox">
+      <span>2002 list details available</span>
+    </label>
+  </div>
+
+  <fieldset class="details-2002" data-details-2002 hidden>
+    <legend>2002 Details</legend>
+
+    <label class="stacked">
+      <span class="required">State</span>
+      <input name="state_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span class="required">District</span>
+      <input name="district_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span>AC name</span>
+      <input name="ac_name_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span class="required">AC No</span>
+      <input name="ac_no_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span class="required">Part No</span>
+      <input name="part_no_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span class="required">Sl No</span>
+      <input name="sl_no_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span>Name as per 2002</span>
+      <input name="name_as_per_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span>Relative name</span>
+      <input name="relative_name_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span>Relationship with relative</span>
+      <input name="relative_relationship_2002" type="text" autocomplete="off">
+    </label>
+
+    <label class="stacked">
+      <span>2002 EPIC number</span>
+      <input name="epic_number_2002" type="text" autocomplete="off">
+    </label>
+  </fieldset>
+
+  <div class="modal-actions">
+    <button type="button" class="secondary" data-cancel>Cancel</button>
+    <button type="submit">Save Person</button>
+  </div>
+</form>
