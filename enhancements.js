@@ -3,8 +3,8 @@ import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 const VERSION = "26-07-06";
 const WA_MESSAGE = "SIR acknowledgement";
 let stateRef;
-let commitRef;
 let isRenderingReadonly = false;
+let enhanceTimer = 0;
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
@@ -77,10 +77,6 @@ async function copyText(value) {
   }
 }
 
-function personById(id) {
-  return stateRef.people.find(p => p.person_id === id) || null;
-}
-
 function copyCell(label, value, displayValue = value) {
   const copyValue = cleanText(value);
   return `
@@ -129,6 +125,7 @@ function renderEnhancedReadonlyCard() {
   if (!box || !select) return;
   const applicant = stateRef.applicants.find(a => a.applicant_id === select.value);
   if (!applicant) return;
+  if (box.dataset.enhancedApplicantId === applicant.applicant_id && box.querySelector(".enhanced-read-card")) return;
 
   isRenderingReadonly = true;
   const data = buildReadonly(applicant, stateRef.people);
@@ -137,6 +134,7 @@ function renderEnhancedReadonlyCard() {
   const phone = onlyDigits(data["Phone Number"]);
   const aadhaarDigits = onlyDigits(data["Aadhaar Number"]);
 
+  box.dataset.enhancedApplicantId = applicant.applicant_id;
   box.innerHTML = `
     <div class="read-card enhanced-read-card">
       <h3>${esc(applicantName)}</h3>
@@ -301,10 +299,14 @@ function applyEnhancements() {
   renderEnhancedReadonlyCard();
 }
 
-export function initEnhancements(state, commit) {
+function scheduleEnhancements() {
+  window.clearTimeout(enhanceTimer);
+  enhanceTimer = window.setTimeout(applyEnhancements, 30);
+}
+
+export function initEnhancements(state) {
   stateRef = state;
-  commitRef = commit;
   applyEnhancements();
-  const observer = new MutationObserver(() => applyEnhancements());
+  const observer = new MutationObserver(scheduleEnhancements);
   observer.observe(document.body, { childList: true, subtree: true });
 }
