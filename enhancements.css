@@ -1,0 +1,29 @@
+/* v26-07-06 enhancements */
+.tabbed-main { padding:1rem; }
+.app-tabs { display:flex; gap:.5rem; margin-bottom:1rem; border-bottom:1px solid var(--line); }
+.tab-btn { background:#eaf3ef; color:var(--green); border-radius:10px 10px 0 0; }
+.tab-btn.active { background:var(--green); color:#fff; }
+.tab-panel { display:none; }
+.tab-panel.active { display:block; }
+.database-grid { display:none; grid-template-columns:1fr; gap:1rem; }
+.database-grid.active { display:grid; }
+.copy-help { margin:-.35rem 0 .45rem; color:var(--muted); font-size:.88rem; font-weight:700; }
+.copy-table-grid { display:grid; gap:0; border:1px solid var(--line); border-bottom:0; border-right:0; margin:.45rem 0; }
+.copy-table-grid.two-cols { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.copy-table-grid.three-cols { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.copy-table-grid.four-cols { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.copy-table-cell { min-width:0; border-right:1px solid var(--line); border-bottom:1px solid var(--line); background:#fff; }
+.copy-table-cell[role="button"] { cursor:pointer; }
+.copy-table-cell[role="button"]:active { opacity:.72; }
+.copy-table-label { min-height:30px; padding:.45rem .55rem; background:#f6fbf8; color:var(--muted); font-size:.78rem; font-weight:800; border-bottom:1px solid var(--line); }
+.copy-table-value { min-height:38px; padding:.55rem; overflow-wrap:anywhere; font-weight:700; }
+#appVersionBadge { position:fixed; right:.75rem; bottom:.5rem; z-index:2500; background:rgba(25,91,69,.92); color:white; border-radius:999px; padding:.3rem .65rem; font-size:.75rem; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+@media (max-width:620px) {
+  .tabbed-main { padding:.75rem; }
+  .app-tabs { position:sticky; top:0; z-index:10; background:var(--bg); padding-top:.35rem; }
+  .app-tabs .tab-btn { flex:1; }
+  .copy-table-grid.four-cols { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .copy-table-label { font-size:.72rem; padding:.38rem .42rem; }
+  .copy-table-value { font-size:.88rem; padding:.45rem; }
+  #appVersionBadge { right:.5rem; bottom:.35rem; font-size:.7rem; }
+}
