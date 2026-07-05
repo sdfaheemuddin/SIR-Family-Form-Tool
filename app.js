@@ -2,6 +2,7 @@
 import { loadState, saveState } from "./storage.js";
 import { initUI } from "./ui.js";
 import { normalizeApplicant, normalizePerson } from "./core.js";
+import { initEnhancements } from "./enhancements.js";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
@@ -31,3 +32,4 @@ if ("serviceWorker" in navigator) {
 
 commit(); // Save normalized/migrated structure.
 initUI(state, commit);
+initEnhancements(state, commit);
