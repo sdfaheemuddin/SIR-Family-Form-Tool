@@ -87,4 +87,12 @@ legend{font-weight:800;color:var(--green)}
 #toast{position:fixed;left:50%;bottom:1rem;transform:translateX(-50%) translateY(120%);z-index:3000;background:rgba(25,91,69,.96);color:#fff;padding:.65rem 1rem;border-radius:999px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;max-width:92vw;text-align:center}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #appVersionBadge{position:fixed;right:.75rem;bottom:.5rem;z-index:2500;background:rgba(25,91,69,.92);color:white;border-radius:999px;padding:.3rem .65rem;font-size:.75rem;font-weight:800;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.form-grid:has(> .checkbox-line:nth-child(3)){grid-template-columns:minmax(0,1fr) auto;align-items:end}
+.form-grid:has(> .checkbox-line:nth-child(3)) > .stacked:first-child{grid-column:1/-1}
+.form-grid:has(> .checkbox-line:nth-child(3)) > .stacked:nth-child(2){grid-column:1/2}
+.form-grid:has(> .checkbox-line:nth-child(3)) > .checkbox-line:nth-child(3){grid-column:2/3;margin:0 0 .15rem 0;padding:.65rem .2rem;white-space:nowrap}
+.form-grid:has(> .checkbox-line:nth-child(3)) > .checkbox-line:nth-child(3) span{font-size:0}
+.form-grid:has(> .checkbox-line:nth-child(3)) > .checkbox-line:nth-child(3) span::after{content:"Override";font-size:.92rem}
+.form-grid:has(> .checkbox-line:nth-child(3)) > *:nth-child(n+4){grid-column:1/-1}
+.details-2002 > label:nth-of-type(1) > span::after,.details-2002 > label:nth-of-type(2) > span::after,.details-2002 > label:nth-of-type(3) > span::after,.details-2002 > label:nth-of-type(4) > span::after,.details-2002 > label:nth-of-type(5) > span::after{content:" *";color:var(--danger)}
 @media(max-width:700px){.app-header{align-items:flex-start}.top-actions{width:100%}.top-actions button,.file-btn{flex:1 1 auto}.tabbed-main{padding:.75rem}.app-tabs{position:sticky;top:0;z-index:10;background:var(--bg);padding-top:.35rem}.tab-btn{flex:1}.copy-table-grid.two-cols{grid-template-columns:1fr}.copy-table-grid.four-cols{grid-template-columns:repeat(2,minmax(0,1fr))}.copy-table-grid.three-cols{grid-template-columns:1fr}.modal-actions,.selection-actions{flex-direction:column}button,.file-btn{min-height:42px}}
