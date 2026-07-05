@@ -1,0 +1,23 @@
+{
+  "name": "SIR Family Forms",
+  "short_name": "SIR Forms",
+  "description": "Offline SIR family form data entry and backup app.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6fbf8",
+  "theme_color": "#195b45",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "id": "./index.html"
+}

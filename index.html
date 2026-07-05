@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIR Family Forms</title>
+  <meta name="theme-color" content="#195b45">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>SIR Family Forms</h1>
+    </div>
+    <div class="top-actions">
+      <button id="exportJsonBtn">Export JSON</button>
+      <label class="file-btn">
+        Import JSON
+        <input id="importJsonInput" type="file" accept="application/json">
+      </label>
+      <button id="generatePdfBtn">Online Form PDF</button>
+      <button id="offlinePdfBtn">Offline Form PDF</button>
+      <button id="clearDataBtn" class="danger">Clear Data</button>
+      <div class="zoom-controls top-zoom" aria-label="App zoom controls">
+        <button id="zoomOutBtn" class="small secondary" type="button">A−</button>
+        <button id="zoomResetBtn" class="small secondary" type="button">A</button>
+        <button id="zoomInBtn" class="small secondary" type="button">A+</button>
+      </div>
+    </div>
+  </header>
+  <div class="app-disclaimer" role="note">
+    Disclaimer: This is not an official mapping or government form. This app is only a helper tool for data entry.
+  </div>
+
+  <main class="grid">
+    <section class="panel" id="peopleSection">
+      <div class="section-head">
+        <h2>1. People Database</h2>
+        <button id="addPersonBtn">Add Person</button>
+      </div>
+      <div id="peopleTableWrap" class="table-wrap"></div>
+    </section>
+
+    <section class="panel" id="applicantsSection">
+      <div class="section-head">
+        <h2>2. Applicant Database</h2>
+        <button id="addApplicantBtn">Add Applicant</button>
+      </div>
+      <div id="applicantTableWrap" class="table-wrap"></div>
+    </section>
+
+    <section class="panel full" id="readonlySection">
+      <div class="section-head">
+        <h2>3. Applicant Data — Read Only</h2>
+      </div>
+      <div class="readonly-picker">
+        <label class="stacked">
+          Select incomplete applicant
+          <select id="readonlyApplicantSelect"></select>
+        </label>
+      </div>
+      <div id="readonlyCard"></div>
+      <div class="readonly-actions readonly-actions-bottom">
+        <button id="markCompleteBtn" type="button">Mark Complete</button>
+        <button id="nextApplicantBtn" type="button" class="secondary">Next</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="modalRoot"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
