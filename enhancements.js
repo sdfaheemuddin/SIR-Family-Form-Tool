@@ -1,9 +1,13 @@
-import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
+import { allReadonly, buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
+import { parseImportFile, sirFileBaseFromState } from "./importExport.js";
+import { generatePdf, generateOfflinePdf } from "./pdf.js";
 
 const VERSION = "26-07-06";
 const WA_MESSAGE = "SIR acknowledgement";
 let stateRef;
+let commitRef;
 let isApplying = false;
+let selectionWired = false;
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => Array.from(document.querySelectorAll(sel));
@@ -134,12 +138,6 @@ function renderEnhancedReadonlyCard() {
           ${valueCell("Type", data["Mapping Type"])}
           ${valueCell("Relationship", data["Mapping Relation"])}
         </div>
-        <div class="copy-table-grid four-cols">
-          ${valueCell("Mapper Name", data["Mapper Name as per 2002"] || data["Mapping Name"] || "")}
-          ${valueCell("2002 EPIC Number", data["Mapper 2002 EPIC Number"] || "")}
-          ${valueCell("Relative", data["Mapper Relative Name"] || "")}
-          ${valueCell("Relation with Relative", data["Mapper Relationship with Relative"] || "")}
-        </div>
         <div class="copy-table-grid two-cols">
           ${valueCell("State", data["Mapping State"])}
           ${valueCell("District", data["Mapping District"])}
@@ -148,6 +146,12 @@ function renderEnhancedReadonlyCard() {
           ${valueCell("AC No", data["Mapping AC No Display"])}
           ${valueCell("Part No", data["Mapping Part No"])}
           ${valueCell("Sl No", data["Mapping Serial No"])}
+        </div>
+        <div class="copy-table-grid four-cols">
+          ${valueCell("Mapper Name", data["Mapper Name as per 2002"] || data["Mapping Name"] || "")}
+          ${valueCell("2002 EPIC Number", data["Mapper 2002 EPIC Number"] || "")}
+          ${valueCell("Relative", data["Mapper Relative Name"] || "")}
+          ${valueCell("Relation with Relative", data["Mapper Relationship with Relative"] || "")}
         </div>
       </section>
       <section class="read-section">
@@ -184,6 +188,229 @@ function renderEnhancedReadonlyCard() {
       }
     });
   });
+}
+
+function personName(sourceState, id) {
+  return sourceState.people.find(p => p.person_id === id)?.name || "Unnamed person";
+}
+
+function applicantName(sourceState, applicant) {
+  return personName(sourceState, applicant.person_id) || "Unnamed applicant";
+}
+
+function relatedPersonIds(applicant) {
+  return [
+    applicant.person_id,
+    applicant.mapper_person_id,
+    applicant.father_person_id,
+    applicant.mother_person_id,
+    applicant.spouse_person_id
+  ].filter(Boolean);
+}
+
+function selectedRelatedPeople(sourceState, selectedApplicantIds) {
+  const selected = new Set(selectedApplicantIds);
+  const ids = new Set();
+  sourceState.applicants.forEach(applicant => {
+    if (selected.has(applicant.applicant_id)) relatedPersonIds(applicant).forEach(id => ids.add(id));
+  });
+  return ids;
+}
+
+function filteredState(sourceState, selectedApplicantIds, selectedPersonIds) {
+  const appIds = new Set(selectedApplicantIds);
+  const personIds = new Set(selectedPersonIds);
+  const applicants = sourceState.applicants.filter(a => appIds.has(a.applicant_id));
+  applicants.forEach(a => relatedPersonIds(a).forEach(id => personIds.add(id)));
+  const people = sourceState.people.filter(p => personIds.has(p.person_id));
+  return { people, applicants };
+}
+
+function downloadFilteredJson(sourceState, selectedApplicantIds, selectedPersonIds) {
+  const picked = filteredState(sourceState, selectedApplicantIds, selectedPersonIds);
+  const payload = {
+    people_database: picked.people,
+    applicant_database: picked.applicants,
+    readonly_applicant_data: allReadonly(picked.applicants, picked.people)
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${sirFileBaseFromState(picked)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function mergeImportedData(imported, selectedApplicantIds, selectedPersonIds) {
+  const appIds = new Set(selectedApplicantIds);
+  const personIds = new Set(selectedPersonIds);
+  imported.applicants.forEach(a => {
+    if (appIds.has(a.applicant_id)) relatedPersonIds(a).forEach(id => personIds.add(id));
+  });
+  const peopleById = new Map(stateRef.people.map(p => [p.person_id, p]));
+  imported.people.forEach(p => { if (personIds.has(p.person_id)) peopleById.set(p.person_id, p); });
+  const applicantsById = new Map(stateRef.applicants.map(a => [a.applicant_id, a]));
+  imported.applicants.forEach(a => { if (appIds.has(a.applicant_id)) applicantsById.set(a.applicant_id, a); });
+  stateRef.people = Array.from(peopleById.values());
+  stateRef.applicants = Array.from(applicantsById.values());
+  commitRef?.();
+  toast("Selected data imported.");
+  setTimeout(() => window.location.reload(), 500);
+}
+
+function openSelectionModal({ title, actionLabel, sourceState, includePeople = false, onConfirm }) {
+  const root = $("#modalRoot") || document.body;
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  const modal = document.createElement("div");
+  modal.className = "modal selection-modal";
+  backdrop.append(modal);
+  root.append(backdrop);
+
+  const selectedApplicants = new Set(sourceState.applicants.map(a => a.applicant_id));
+  const manualPeople = new Set(includePeople ? sourceState.people.map(p => p.person_id) : []);
+
+  function render() {
+    const lockedPeople = includePeople ? selectedRelatedPeople(sourceState, selectedApplicants) : new Set();
+    const allApplicantChecked = sourceState.applicants.length > 0 && sourceState.applicants.every(a => selectedApplicants.has(a.applicant_id));
+    const allPeopleChecked = !includePeople || sourceState.people.every(p => lockedPeople.has(p.person_id) || manualPeople.has(p.person_id));
+    const allChecked = allApplicantChecked && allPeopleChecked;
+    modal.innerHTML = `
+      <div class="modal-head">
+        <h3>${esc(title)}</h3>
+        <button type="button" class="small secondary" data-close-selection>Close</button>
+      </div>
+      <div class="selection-summary">Select the records to use. Related people are locked when an applicant is selected.</div>
+      <label class="checkbox-line selection-master">
+        <input type="checkbox" data-select-all ${allChecked ? "checked" : ""}>
+        <span>Select all / Unselect all</span>
+      </label>
+      <div class="selection-lists ${includePeople ? "with-people" : ""}">
+        <section class="selection-group">
+          <h4>Applicants</h4>
+          ${sourceState.applicants.length ? sourceState.applicants.map(a => `
+            <label class="selection-item">
+              <input type="checkbox" data-applicant-choice="${esc(a.applicant_id)}" ${selectedApplicants.has(a.applicant_id) ? "checked" : ""}>
+              <span>${esc(applicantName(sourceState, a))}<small>${esc(sourceState.people.find(p => p.person_id === a.person_id)?.epic_number || "")}</small></span>
+            </label>`).join("") : `<div class="empty">No applicants available.</div>`}
+        </section>
+        ${includePeople ? `<section class="selection-group">
+          <h4>People Data</h4>
+          ${sourceState.people.length ? sourceState.people.map(p => {
+            const locked = lockedPeople.has(p.person_id);
+            const checked = locked || manualPeople.has(p.person_id);
+            return `
+              <label class="selection-item ${locked ? "disabled" : ""}">
+                <input type="checkbox" data-person-choice="${esc(p.person_id)}" ${checked ? "checked" : ""} ${locked ? "disabled" : ""}>
+                <span>${esc(p.name || "Unnamed person")}<small>${esc(p.epic_number || p.epic_number_2002 || "")}${locked ? " — required by selected applicant" : ""}</small></span>
+              </label>`;
+          }).join("") : `<div class="empty">No people data available.</div>`}
+        </section>` : ""}
+      </div>
+      <div class="selection-actions">
+        <button type="button" class="secondary" data-close-selection>Cancel</button>
+        <button type="button" data-confirm-selection>${esc(actionLabel)}</button>
+      </div>`;
+
+    modal.querySelectorAll("[data-close-selection]").forEach(btn => btn.addEventListener("click", () => backdrop.remove()));
+    modal.querySelector("[data-select-all]")?.addEventListener("change", event => {
+      const checked = event.target.checked;
+      selectedApplicants.clear();
+      if (checked) sourceState.applicants.forEach(a => selectedApplicants.add(a.applicant_id));
+      manualPeople.clear();
+      if (checked && includePeople) sourceState.people.forEach(p => manualPeople.add(p.person_id));
+      render();
+    });
+    modal.querySelectorAll("[data-applicant-choice]").forEach(input => input.addEventListener("change", event => {
+      if (event.target.checked) selectedApplicants.add(event.target.dataset.applicantChoice);
+      else selectedApplicants.delete(event.target.dataset.applicantChoice);
+      render();
+    }));
+    modal.querySelectorAll("[data-person-choice]").forEach(input => input.addEventListener("change", event => {
+      if (event.target.checked) manualPeople.add(event.target.dataset.personChoice);
+      else manualPeople.delete(event.target.dataset.personChoice);
+      render();
+    }));
+    modal.querySelector("[data-confirm-selection]")?.addEventListener("click", () => {
+      const lockedPeople = includePeople ? selectedRelatedPeople(sourceState, selectedApplicants) : new Set();
+      const selectedPeople = new Set([...manualPeople, ...lockedPeople]);
+      if (!selectedApplicants.size && !selectedPeople.size) {
+        toast("Select at least one record.");
+        return;
+      }
+      backdrop.remove();
+      onConfirm([...selectedApplicants], [...selectedPeople]);
+    });
+  }
+
+  render();
+}
+
+function handleExportClick(event) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  openSelectionModal({
+    title: "Export JSON",
+    actionLabel: "Export JSON",
+    sourceState: stateRef,
+    includePeople: true,
+    onConfirm: (appIds, personIds) => {
+      downloadFilteredJson(stateRef, appIds, personIds);
+      toast("Selected JSON exported.");
+    }
+  });
+}
+
+function handlePdfClick(event, offline = false) {
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  openSelectionModal({
+    title: offline ? "Offline Form PDF" : "Online Form PDF",
+    actionLabel: offline ? "Create Offline PDF" : "Create Online PDF",
+    sourceState: stateRef,
+    includePeople: false,
+    onConfirm: appIds => {
+      const picked = filteredState(stateRef, appIds, stateRef.people.map(p => p.person_id));
+      if (offline) generateOfflinePdf(picked);
+      else generatePdf(picked);
+      toast("Selected PDF print page opened.");
+    }
+  });
+}
+
+async function handleImportChange(event) {
+  event.stopImmediatePropagation();
+  const input = event.target;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const imported = await parseImportFile(file);
+    input.value = "";
+    openSelectionModal({
+      title: "Import JSON",
+      actionLabel: "Import Selected",
+      sourceState: imported,
+      includePeople: true,
+      onConfirm: (appIds, personIds) => mergeImportedData(imported, appIds, personIds)
+    });
+  } catch (err) {
+    console.error("Import failed", err);
+    input.value = "";
+    alert(err.message || "Import failed.");
+  }
+}
+
+function wireSelectionActions() {
+  if (selectionWired) return;
+  const exportBtn = $("#exportJsonBtn");
+  const onlineBtn = $("#generatePdfBtn");
+  const offlineBtn = $("#offlinePdfBtn");
+  const importInput = $("#importJsonInput");
+  exportBtn?.addEventListener("click", handleExportClick, true);
+  onlineBtn?.addEventListener("click", event => handlePdfClick(event, false), true);
+  offlineBtn?.addEventListener("click", event => handlePdfClick(event, true), true);
+  importInput?.addEventListener("change", handleImportChange, true);
+  selectionWired = true;
 }
 
 function setupTabs() {
@@ -277,12 +504,14 @@ function applyEnhancements() {
   addVersionBadge();
   updateWhatsappLinks();
   move2002EpicToLast();
+  wireSelectionActions();
   renderEnhancedReadonlyCard();
   isApplying = false;
 }
 
-export function initEnhancements(state) {
+export function initEnhancements(state, commit) {
   stateRef = state;
+  commitRef = commit;
   applyEnhancements();
   let timer = null;
   const observer = new MutationObserver(() => {
