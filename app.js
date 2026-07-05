@@ -32,17 +32,3 @@ if ("serviceWorker" in navigator) {
 
 commit(); // Save normalized/migrated structure.
 initUI(state, commit);
-
-// Load enhancements after the base app is already interactive.
-// If enhancement code fails, the original app buttons still work.
-import("./enhancements3.js")
-  .then(module => module.initEnhancements?.(state, commit))
-  .catch(err => {
-    console.error("Enhancements failed to load", err);
-    const toast = document.querySelector("#toast");
-    if (toast) {
-      toast.textContent = "Enhancements failed to load. Base app is still usable.";
-      toast.classList.add("show");
-      setTimeout(() => toast.classList.remove("show"), 4000);
-    }
-  });
