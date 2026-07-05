@@ -11,7 +11,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-06-popup-split");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-06-family-filter");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
@@ -54,6 +54,10 @@ function keep(select, value) {
   if (value && [...select.options].some(option => option.value === value)) select.value = value;
 }
 
+function safeChoice(value, exclude) {
+  return value && !exclude.has(value) ? value : "";
+}
+
 function disableSelect(select, disabled) {
   select.disabled = Boolean(disabled);
   select.closest("label")?.classList.toggle("disabled-field", Boolean(disabled));
@@ -75,38 +79,60 @@ function setSelects(form, draft, forcedValues = null) {
   const father = form.elements.father_person_id;
   const mother = form.elements.mother_person_id;
   const spouse = form.elements.spouse_person_id;
-  const used = new Set(stateRef.applicants.filter(a => a.applicant_id !== draft.applicant_id).map(a => a.person_id));
-  const old = forcedValues || { applicant: applicant.value, mapper: mapper.value, father: father.value, mother: mother.value, spouse: spouse.value };
+  const usedApplicants = new Set(stateRef.applicants.filter(a => a.applicant_id !== draft.applicant_id).map(a => a.person_id));
+  const old = forcedValues || {
+    applicant: applicant.value,
+    mapper: mapper.value,
+    father: father.value,
+    mother: mother.value,
+    spouse: spouse.value
+  };
 
-  applicant.innerHTML = optionList({ filter: hasEpic, exclude: used, force: old.applicant ? [old.applicant] : [] });
+  applicant.innerHTML = optionList({ filter: hasEpic, exclude: usedApplicants, force: old.applicant ? [old.applicant] : [] });
   keep(applicant, old.applicant);
+  const applicantId = applicant.value || "";
 
   if (relation.value === "Self") {
-    mapper.innerHTML = optionList({ add: false, blank: false, force: applicant.value ? [applicant.value] : [] });
-    mapper.value = applicant.value || "";
+    mapper.innerHTML = optionList({ add: false, blank: false, force: applicantId ? [applicantId] : [] });
+    mapper.value = applicantId || "";
     disableSelect(mapper, true);
   } else {
     mapper.innerHTML = optionList({ filter: has2002Details, force: old.mapper ? [old.mapper] : [] });
     keep(mapper, old.mapper);
     disableSelect(mapper, false);
   }
+  const mapperId = mapper.value || "";
 
-  father.innerHTML = optionList({ force: old.father ? [old.father] : [] });
-  mother.innerHTML = optionList({ force: old.mother ? [old.mother] : [] });
-  spouse.innerHTML = optionList({ force: old.spouse ? [old.spouse] : [] });
-  keep(father, old.father); keep(mother, old.mother); keep(spouse, old.spouse);
-
-  if (relation.value === "Father" && mapper.value) {
-    father.innerHTML = optionList({ add: false, blank: false, force: [mapper.value] });
-    father.value = mapper.value;
+  if (relation.value === "Father" && mapperId) {
+    father.innerHTML = optionList({ add: false, blank: false, force: [mapperId] });
+    father.value = mapperId;
     disableSelect(father, true);
-  } else disableSelect(father, false);
+  } else {
+    const fatherExclude = new Set([applicantId, old.mother, old.spouse].filter(Boolean));
+    const fatherValue = safeChoice(old.father, fatherExclude);
+    father.innerHTML = optionList({ exclude: fatherExclude, force: fatherValue ? [fatherValue] : [] });
+    keep(father, fatherValue);
+    disableSelect(father, false);
+  }
+  const fatherId = father.value || "";
 
-  if (relation.value === "Mother" && mapper.value) {
-    mother.innerHTML = optionList({ add: false, blank: false, force: [mapper.value] });
-    mother.value = mapper.value;
+  if (relation.value === "Mother" && mapperId) {
+    mother.innerHTML = optionList({ add: false, blank: false, force: [mapperId] });
+    mother.value = mapperId;
     disableSelect(mother, true);
-  } else disableSelect(mother, false);
+  } else {
+    const motherExclude = new Set([applicantId, fatherId, old.spouse].filter(Boolean));
+    const motherValue = safeChoice(old.mother, motherExclude);
+    mother.innerHTML = optionList({ exclude: motherExclude, force: motherValue ? [motherValue] : [] });
+    keep(mother, motherValue);
+    disableSelect(mother, false);
+  }
+  const motherId = mother.value || "";
+
+  const spouseExclude = new Set([applicantId, mapperId, fatherId, motherId].filter(Boolean));
+  const spouseValue = safeChoice(old.spouse, spouseExclude);
+  spouse.innerHTML = optionList({ exclude: spouseExclude, force: spouseValue ? [spouseValue] : [] });
+  keep(spouse, spouseValue);
 }
 
 async function handleAddNew(select, form, draft) {
