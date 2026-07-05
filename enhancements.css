@@ -32,6 +32,11 @@
 .selection-item small { display:block; color:var(--muted); font-weight:600; margin-top:.15rem; }
 .selection-item.disabled { opacity:.7; }
 .selection-actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:1rem; }
+.photo-editor-modal { max-width:760px; }
+.photo-editor-body { display:grid; grid-template-columns:auto minmax(0,1fr); gap:1rem; align-items:start; }
+.photo-crop-canvas { width:270px; height:360px; border:1px solid var(--line); background:#fff; border-radius:10px; }
+.photo-editor-controls { display:grid; gap:.65rem; }
+.photo-editor-controls input[type="range"] { padding:0; }
 @media (min-width:760px) {
   .selection-lists.with-people { grid-template-columns:1fr 1fr; }
 }
@@ -44,4 +49,6 @@
   .copy-table-value { font-size:.88rem; padding:.45rem; }
   #appVersionBadge { right:.5rem; bottom:.35rem; font-size:.7rem; }
   .selection-actions { flex-direction:column; }
+  .photo-editor-body { grid-template-columns:1fr; }
+  .photo-crop-canvas { width:100%; max-width:270px; height:auto; justify-self:center; }
 }
