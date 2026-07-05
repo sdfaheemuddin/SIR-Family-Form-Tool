@@ -1,4 +1,4 @@
-const CACHE_NAME = "sir-family-forms-v26-07-06-native-person-popup";
+const CACHE_NAME = "sir-family-forms-v26-07-06-popup-split";
 const BASE_URL = new URL("./", self.location);
 const INDEX_URL = new URL("./index.html", self.location).href;
 
@@ -17,7 +17,11 @@ const ASSET_PATHS = [
   "./icon.png",
   "./popups/person-popup.html",
   "./popups/person-popup.js",
-  "./popups/person-popup.css"
+  "./popups/person-popup.css",
+  "./popups/applicant-popup.html",
+  "./popups/applicant-popup.js",
+  "./popups/photo-popup.html",
+  "./popups/photo-popup.js"
 ];
 
 const ASSETS = ASSET_PATHS.map(path => new URL(path, BASE_URL).href);
