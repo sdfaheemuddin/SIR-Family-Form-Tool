@@ -2,7 +2,7 @@
 import { loadState, saveState } from "./storage.js";
 import { initUI } from "./ui.js";
 import { normalizeApplicant, normalizePerson } from "./core.js";
-import { initEnhancements } from "./enhancements.js";
+import { initEnhancements } from "./enhancements2.js";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
