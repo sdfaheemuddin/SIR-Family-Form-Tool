@@ -18,6 +18,23 @@
 .copy-table-label { min-height:30px; padding:.45rem .55rem; background:#f6fbf8; color:var(--muted); font-size:.78rem; font-weight:800; border-bottom:1px solid var(--line); }
 .copy-table-value { min-height:38px; padding:.55rem; overflow-wrap:anywhere; font-weight:700; }
 #appVersionBadge { position:fixed; right:.75rem; bottom:.5rem; z-index:2500; background:rgba(25,91,69,.92); color:white; border-radius:999px; padding:.3rem .65rem; font-size:.75rem; font-weight:800; box-shadow:0 4px 14px rgba(0,0,0,.18); }
+#applicantTableWrap table th:first-child,
+#applicantTableWrap table td:first-child { display:none; }
+.selection-modal { max-width:820px; }
+.selection-summary { margin:.25rem 0 .75rem; color:var(--muted); font-weight:700; }
+.selection-master { padding:.65rem .75rem; border:1px solid var(--line); border-radius:10px; background:#f6fbf8; margin-bottom:.75rem; }
+.selection-lists { display:grid; grid-template-columns:1fr; gap:1rem; max-height:62vh; overflow:auto; padding-right:.2rem; }
+.selection-group { border:1px solid var(--line); border-radius:12px; padding:.75rem; background:#fff; }
+.selection-group h4 { margin:.1rem 0 .65rem; color:var(--green); }
+.selection-item { display:flex; gap:.6rem; align-items:flex-start; padding:.45rem .2rem; border-bottom:1px solid var(--line); font-weight:700; }
+.selection-item:last-child { border-bottom:0; }
+.selection-item input { width:auto; margin-top:.2rem; }
+.selection-item small { display:block; color:var(--muted); font-weight:600; margin-top:.15rem; }
+.selection-item.disabled { opacity:.7; }
+.selection-actions { display:flex; justify-content:flex-end; gap:.5rem; margin-top:1rem; }
+@media (min-width:760px) {
+  .selection-lists.with-people { grid-template-columns:1fr 1fr; }
+}
 @media (max-width:620px) {
   .tabbed-main { padding:.75rem; }
   .app-tabs { position:sticky; top:0; z-index:10; background:var(--bg); padding-top:.35rem; }
@@ -26,4 +43,5 @@
   .copy-table-label { font-size:.72rem; padding:.38rem .42rem; }
   .copy-table-value { font-size:.88rem; padding:.45rem; }
   #appVersionBadge { right:.5rem; bottom:.35rem; font-size:.7rem; }
+  .selection-actions { flex-direction:column; }
 }
