@@ -1,0 +1,27 @@
+.native-person-popup .person-popup-form {
+  display: block;
+}
+
+.native-person-popup .inline-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.native-person-popup .override-inline {
+  margin: 0;
+  white-space: nowrap;
+  padding: 0.2rem 0;
+}
+
+.native-person-popup .details-2002 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.native-person-popup .required::after {
+  content: " *";
+  color: var(--danger);
+}
