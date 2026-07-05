@@ -1,6 +1,6 @@
 // Cache-first service worker for GitHub Pages project sites.
 // Increment this version when files change.
-const CACHE_NAME = "sir-family-forms-v26-07-06-photo-attach";
+const CACHE_NAME = "sir-family-forms-v26-07-06-startup-fix";
 const BASE_URL = new URL("./", self.location);
 const INDEX_URL = new URL("./index.html", self.location).href;
 
