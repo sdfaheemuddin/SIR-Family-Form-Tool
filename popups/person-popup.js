@@ -1,4 +1,4 @@
-import { blankPerson, normalizeEpic, normalizePerson, validatePerson } from "../core.js";
+import { blankPerson, has2002Details, normalizeEpic, normalizePerson, validatePerson } from "../core.js";
 
 let stateRef;
 let commitRef;
@@ -8,7 +8,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/person-popup.html?v=26-07-06-native-person-popup");
+  const response = await fetch("./popups/person-popup.html?v=26-07-06-popup-split");
   if (!response.ok) throw new Error("Could not load People popup template.");
   templateText = await response.text();
   return templateText;
@@ -67,7 +67,11 @@ function sync2002(form) {
   });
 }
 
-export async function openPersonPopup(personId = "") {
+export async function openPersonPopup(options = {}) {
+  const personId = typeof options === "string" ? options : (options.personId || "");
+  const fromApplicant = Boolean(options.fromApplicant);
+  const fromMapper = Boolean(options.fromMapper);
+  const onSaved = typeof options.onSaved === "function" ? options.onSaved : null;
   const existing = stateRef.people.find(p => p.person_id === personId);
   const draft = existing ? { ...existing } : blankPerson();
   const modal = showModal(existing ? "Edit Person" : "Add Person");
@@ -76,6 +80,11 @@ export async function openPersonPopup(personId = "") {
   const errorBox = form.querySelector("[data-error]");
 
   Object.entries(draft).forEach(([key, value]) => setField(form, key, value));
+  if (fromApplicant) form.querySelector("[data-epic-label]").classList.add("required");
+  if (fromMapper) {
+    form.elements.is_2002_available.checked = true;
+    form.elements.is_2002_available.disabled = true;
+  }
   sync2002(form);
 
   form.elements.epic_number.addEventListener("input", () => {
@@ -90,7 +99,7 @@ export async function openPersonPopup(personId = "") {
   form.addEventListener("submit", event => {
     event.preventDefault();
     const person = readPerson(form, draft);
-    const errors = validatePerson(person);
+    const errors = validatePerson(person, { requireEpic: fromApplicant });
     errorBox.style.display = errors.length ? "block" : "none";
     errorBox.textContent = errors.join("\n");
     if (errors.length) return;
@@ -100,7 +109,8 @@ export async function openPersonPopup(personId = "") {
     commitRef();
     modal.remove();
     toast("Person saved.");
-    location.reload();
+    if (onSaved) onSaved(fromMapper && !has2002Details(person) ? null : person, person);
+    else location.reload();
   });
 }
 
@@ -114,6 +124,6 @@ export function initPersonPopupOverrides(state, commit) {
     if (!editButton) return;
     event.preventDefault();
     event.stopPropagation();
-    openPersonPopup(editButton.dataset.editPerson);
+    openPersonPopup({ personId: editButton.dataset.editPerson });
   }, true);
 }
