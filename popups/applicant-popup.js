@@ -35,10 +35,6 @@ function openShell(title) {
   return backdrop;
 }
 
-function personName(id) {
-  return stateRef.people.find(p => p.person_id === id)?.name || "";
-}
-
 function optionList({ filter = null, exclude = new Set(), add = true, blank = true, force = [] } = {}) {
   const forced = force.map(id => stateRef.people.find(p => p.person_id === id)).filter(Boolean);
   const forcedIds = new Set(forced.map(p => p.person_id));
@@ -72,7 +68,7 @@ function syncPhoto(form, photoData) {
   else preview.removeAttribute("src");
 }
 
-function setSelects(form, draft) {
+function setSelects(form, draft, forcedValues = null) {
   const applicant = form.elements.person_id;
   const relation = form.elements.mapper_relationship;
   const mapper = form.elements.mapper_person_id;
@@ -80,7 +76,7 @@ function setSelects(form, draft) {
   const mother = form.elements.mother_person_id;
   const spouse = form.elements.spouse_person_id;
   const used = new Set(stateRef.applicants.filter(a => a.applicant_id !== draft.applicant_id).map(a => a.person_id));
-  const old = { applicant: applicant.value, mapper: mapper.value, father: father.value, mother: mother.value, spouse: spouse.value };
+  const old = forcedValues || { applicant: applicant.value, mapper: mapper.value, father: father.value, mother: mother.value, spouse: spouse.value };
 
   applicant.innerHTML = optionList({ filter: hasEpic, exclude: used, force: old.applicant ? [old.applicant] : [] });
   keep(applicant, old.applicant);
@@ -145,19 +141,13 @@ export async function openApplicantPopup(applicantId = "") {
   form.elements.phone_number.value = draft.phone_number || "";
   form.elements.aadhaar_number.value = formatAadhaar(draft.aadhaar_number || "");
   form.elements.date_of_birth.value = draft.date_of_birth || "";
-  form.elements.person_id.value = draft.person_id || "";
-  form.elements.mapper_person_id.value = draft.mapper_person_id || "";
-  form.elements.father_person_id.value = draft.father_person_id || "";
-  form.elements.mother_person_id.value = draft.mother_person_id || "";
-  form.elements.spouse_person_id.value = draft.spouse_person_id || "";
-
-  setSelects(form, draft);
-  keep(form.elements.person_id, draft.person_id);
-  keep(form.elements.mapper_person_id, draft.mapper_person_id);
-  keep(form.elements.father_person_id, draft.father_person_id);
-  keep(form.elements.mother_person_id, draft.mother_person_id);
-  keep(form.elements.spouse_person_id, draft.spouse_person_id);
-  setSelects(form, draft);
+  setSelects(form, draft, {
+    applicant: draft.person_id || "",
+    mapper: draft.mapper_person_id || "",
+    father: draft.father_person_id || "",
+    mother: draft.mother_person_id || "",
+    spouse: draft.spouse_person_id || ""
+  });
   syncPhoto(form, photoData);
 
   form.elements.phone_number.addEventListener("input", () => {
