@@ -2,7 +2,6 @@
 import { loadState, saveState } from "./storage.js";
 import { initUI } from "./ui.js";
 import { normalizeApplicant, normalizePerson } from "./core.js";
-import { initEnhancements } from "./enhancements3.js";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
@@ -21,6 +20,7 @@ const state = {
 const commit = () => saveState(state);
 
 window.addEventListener("error", event => console.error("App error", event.error));
+window.addEventListener("unhandledrejection", event => console.error("App promise error", event.reason));
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -32,4 +32,17 @@ if ("serviceWorker" in navigator) {
 
 commit(); // Save normalized/migrated structure.
 initUI(state, commit);
-initEnhancements(state, commit);
+
+// Load enhancements after the base app is already interactive.
+// If enhancement code fails, the original app buttons still work.
+import("./enhancements3.js")
+  .then(module => module.initEnhancements?.(state, commit))
+  .catch(err => {
+    console.error("Enhancements failed to load", err);
+    const toast = document.querySelector("#toast");
+    if (toast) {
+      toast.textContent = "Enhancements failed to load. Base app is still usable.";
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 4000);
+    }
+  });
