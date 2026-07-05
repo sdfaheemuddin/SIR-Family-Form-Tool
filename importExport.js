@@ -11,8 +11,7 @@ import {
 export function buildExportPayload(state) {
   return {
     people_database: state.people,
-    applicant_database: state.applicants,
-    readonly_applicant_data: allReadonly(state.applicants, state.people)
+    applicant_database: state.applicants
   };
 }
 
@@ -29,8 +28,8 @@ export function yymmddhhmm(date = new Date()) {
 }
 
 export function sirFileBaseFromState(state, date = new Date()) {
-  const payload = buildExportPayload(state);
-  const first = payload.readonly_applicant_data[0]?.applicant_name || "NoApplicant";
+  const readonlyRows = allReadonly(state.applicants || [], state.people || []);
+  const first = readonlyRows[0]?.applicant_name || "NoApplicant";
   return `SIR2026_${safeName(first)}_${yymmddhhmm(date)}`;
 }
 
