@@ -1,5 +1,5 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, hasEpic, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-06-family-filter";
+import { openPersonPopup } from "./person-popup.js?v=26-07-06-add-new-person";
 import { openPhotoPopup } from "./photo-popup.js";
 
 const ADD_NEW = "__add_new__";
@@ -11,7 +11,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-06-family-filter");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-06-add-new-person");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
