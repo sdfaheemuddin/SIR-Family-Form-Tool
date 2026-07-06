@@ -8,7 +8,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/person-popup.html?v=26-07-06-popup-split");
+  const response = await fetch("./popups/person-popup.html?v=26-07-06-add-new-state");
   if (!response.ok) throw new Error("Could not load People popup template.");
   templateText = await response.text();
   return templateText;
@@ -69,10 +69,14 @@ function sync2002(form) {
 
 export async function openPersonPopup(options = {}) {
   const personId = typeof options === "string" ? options : (options.personId || "");
+  const activeState = options.state || stateRef;
+  const activeCommit = options.commit || commitRef;
+  if (!activeState || !activeCommit) throw new Error("People popup is not initialized.");
+
   const fromApplicant = Boolean(options.fromApplicant);
   const fromMapper = Boolean(options.fromMapper);
   const onSaved = typeof options.onSaved === "function" ? options.onSaved : null;
-  const existing = stateRef.people.find(p => p.person_id === personId);
+  const existing = activeState.people.find(p => p.person_id === personId);
   const draft = existing ? { ...existing } : blankPerson();
   const modal = showModal(existing ? "Edit Person" : "Add Person");
   modal.querySelector("[data-body]").innerHTML = await getTemplate();
@@ -103,10 +107,10 @@ export async function openPersonPopup(options = {}) {
     errorBox.style.display = errors.length ? "block" : "none";
     errorBox.textContent = errors.join("\n");
     if (errors.length) return;
-    const index = stateRef.people.findIndex(p => p.person_id === person.person_id);
-    if (index >= 0) stateRef.people[index] = person;
-    else stateRef.people.push(person);
-    commitRef();
+    const index = activeState.people.findIndex(p => p.person_id === person.person_id);
+    if (index >= 0) activeState.people[index] = person;
+    else activeState.people.push(person);
+    activeCommit();
     modal.remove();
     toast("Person saved.");
     if (onSaved) onSaved(fromMapper && !has2002Details(person) ? null : person, person);
@@ -118,12 +122,12 @@ export function initPersonPopupOverrides(state, commit) {
   stateRef = state;
   commitRef = commit;
   const addButton = $("#addPersonBtn");
-  if (addButton) addButton.onclick = () => openPersonPopup();
+  if (addButton) addButton.onclick = () => openPersonPopup({ state, commit });
   document.addEventListener("click", event => {
     const editButton = event.target.closest("[data-edit-person]");
     if (!editButton) return;
     event.preventDefault();
     event.stopPropagation();
-    openPersonPopup({ personId: editButton.dataset.editPerson });
+    openPersonPopup({ personId: editButton.dataset.editPerson, state, commit });
   }, true);
 }
