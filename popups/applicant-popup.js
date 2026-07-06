@@ -1,5 +1,5 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, hasEpic, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js";
+import { openPersonPopup } from "./person-popup.js?v=26-07-06-family-filter";
 import { openPhotoPopup } from "./photo-popup.js";
 
 const ADD_NEW = "__add_new__";
@@ -70,8 +70,7 @@ function syncPhoto(form, photoData) {
   remove.hidden = !photoData;
   if (photoData) preview.src = photoData;
   else preview.removeAttribute("src");
-}
-
+}\n
 function setSelects(form, draft, forcedValues = null) {
   const applicant = form.elements.person_id;
   const relation = form.elements.mapper_relationship;
