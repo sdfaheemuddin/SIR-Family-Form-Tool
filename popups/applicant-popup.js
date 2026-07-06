@@ -70,7 +70,8 @@ function syncPhoto(form, photoData) {
   remove.hidden = !photoData;
   if (photoData) preview.src = photoData;
   else preview.removeAttribute("src");
-}\n
+}
+
 function setSelects(form, draft, forcedValues = null) {
   const applicant = form.elements.person_id;
   const relation = form.elements.mapper_relationship;
