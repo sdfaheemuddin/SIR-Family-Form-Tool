@@ -1,4 +1,4 @@
-import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, hasEpic, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
+import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
 import { openPersonPopup } from "./person-popup.js?v=26-07-06-ui-polish";
 import { openPhotoPopup } from "./photo-popup.js?v=26-07-06-ui-polish";
 
@@ -89,7 +89,7 @@ function setSelects(form, draft, forcedValues = null) {
     spouse: spouse.value
   };
 
-  applicant.innerHTML = optionList({ filter: hasEpic, exclude: usedApplicants, force: old.applicant ? [old.applicant] : [] });
+  applicant.innerHTML = optionList({ exclude: usedApplicants, force: old.applicant ? [old.applicant] : [] });
   keep(applicant, old.applicant);
   const applicantId = applicant.value || "";
 
