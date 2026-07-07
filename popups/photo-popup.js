@@ -1,11 +1,12 @@
 const MAX_PHOTO_BYTES = 1.8 * 1024 * 1024;
 let templateText = "";
 
+const VERSION = "26-07-06-ui-polish";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/photo-popup.html?v=26-07-06-popup-split");
+  const response = await fetch(`./popups/photo-popup.html?v=${VERSION}`);
   if (!response.ok) throw new Error("Could not load Photo popup template.");
   templateText = await response.text();
   return templateText;
@@ -61,7 +62,7 @@ export async function openPhotoPopup(file) {
     const cropWidth = cropHeight * ratio;
     const baseX = (image.width - cropWidth) / 2;
     const baseY = (image.height - cropHeight) / 2;
-    const sx = Math.max(0, Math.min(image.width - cropWidth, baseX + baseX * settings.x / 100));
+    const sx = Math.max(0, Math.min(image.width - cropWidth, baseX - baseX * settings.x / 100));
     const sy = Math.max(0, Math.min(image.height - cropHeight, baseY + baseY * settings.y / 100));
     ctx.drawImage(image, sx, sy, cropWidth, cropHeight, 0, 0, width, height);
     if (settings.bg) {
