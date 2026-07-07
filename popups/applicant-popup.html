@@ -2,9 +2,12 @@
   <div class="error-box" data-error></div>
 
   <div class="form-grid">
-    <label class="stacked">
+    <label class="stacked applicant-person-field">
       <span class="required">Applicant Name</span>
-      <select name="person_id" required></select>
+      <div class="inline-select-action">
+        <select name="person_id" required></select>
+        <button type="button" class="small secondary icon-btn" data-edit-applicant-person title="Edit selected applicant person" aria-label="Edit selected applicant person">✎</button>
+      </div>
     </label>
 
     <label class="stacked">
