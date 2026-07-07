@@ -1,6 +1,6 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-06-ui-polish";
-import { openPhotoPopup } from "./photo-popup.js?v=26-07-06-ui-polish";
+import { openPersonPopup } from "./person-popup.js?v=26-07-07";
+import { openPhotoPopup } from "./photo-popup.js?v=26-07-07";
 
 const ADD_NEW = "__add_new__";
 const DOB_MAX = "2009-12-31";
@@ -12,7 +12,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-06-ui-polish");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-07");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
@@ -66,8 +66,10 @@ function disableSelect(select, disabled) {
 
 function syncPhoto(form, photoData) {
   const preview = $("[data-photo-preview]", form);
+  const edit = $("[data-edit-photo]", form);
   const remove = $("[data-remove-photo]", form);
   preview.hidden = !photoData;
+  edit.hidden = !photoData;
   remove.hidden = !photoData;
   if (photoData) preview.src = photoData;
   else preview.removeAttribute("src");
@@ -81,13 +83,7 @@ function setSelects(form, draft, forcedValues = null) {
   const mother = form.elements.mother_person_id;
   const spouse = form.elements.spouse_person_id;
   const usedApplicants = new Set(stateRef.applicants.filter(a => a.applicant_id !== draft.applicant_id).map(a => a.person_id));
-  const old = forcedValues || {
-    applicant: applicant.value,
-    mapper: mapper.value,
-    father: father.value,
-    mother: mother.value,
-    spouse: spouse.value
-  };
+  const old = forcedValues || { applicant: applicant.value, mapper: mapper.value, father: father.value, mother: mother.value, spouse: spouse.value };
 
   applicant.innerHTML = optionList({ exclude: usedApplicants, force: old.applicant ? [old.applicant] : [] });
   keep(applicant, old.applicant);
@@ -151,6 +147,7 @@ async function handleAddNew(select, form, draft) {
       setSelects(form, draft);
       select.value = person.person_id;
       setSelects(form, draft);
+      document.dispatchEvent(new CustomEvent("sir:data-changed"));
     }
   });
   return true;
@@ -159,10 +156,20 @@ async function handleAddNew(select, form, draft) {
 function applicantErrors(applicant) {
   const result = validateApplicant(applicant, stateRef.people, stateRef.applicants, applicant.applicant_id);
   const errors = result.errors.filter(error => !/Aadhaar/i.test(error));
-  if (applicant.date_of_birth && applicant.date_of_birth > DOB_MAX) {
-    errors.push("Date of Birth must be on or before 31-12-2009.");
-  }
+  if (applicant.date_of_birth && applicant.date_of_birth > DOB_MAX) errors.push("Date of Birth must be on or before 31-12-2009.");
   return { ...result, errors };
+}
+
+async function applyPhotoEdit(source, form, setPhoto) {
+  try {
+    const data = await openPhotoPopup(source);
+    setPhoto(data);
+    toast("Photo updated. Click Save Applicant to save.");
+  } catch (error) {
+    if (error.message !== "Photo cancelled.") toast(error.message || "Could not update photo.");
+  } finally {
+    form.elements.photo_file.value = "";
+  }
 }
 
 export async function openApplicantPopup(applicantId = "") {
@@ -173,6 +180,7 @@ export async function openApplicantPopup(applicantId = "") {
   const form = shell.querySelector("form");
   const errorBox = form.querySelector("[data-error]");
   let photoData = draft.photo_data || "";
+  const setPhoto = data => { photoData = data || ""; syncPhoto(form, photoData); };
 
   form.elements.mapper_relationship.innerHTML = `<option value="">Select</option>` + RELATIONSHIPS.map(r => `<option value="${r}">${r}</option>`).join("");
   form.elements.mapper_relationship.value = draft.mapper_relationship || "";
@@ -180,35 +188,17 @@ export async function openApplicantPopup(applicantId = "") {
   form.elements.aadhaar_number.value = formatAadhaar(draft.aadhaar_number || "");
   form.elements.date_of_birth.value = draft.date_of_birth || "";
   form.elements.date_of_birth.max = DOB_MAX;
-  setSelects(form, draft, {
-    applicant: draft.person_id || "",
-    mapper: draft.mapper_person_id || "",
-    father: draft.father_person_id || "",
-    mother: draft.mother_person_id || "",
-    spouse: draft.spouse_person_id || ""
-  });
+  setSelects(form, draft, { applicant: draft.person_id || "", mapper: draft.mapper_person_id || "", father: draft.father_person_id || "", mother: draft.mother_person_id || "", spouse: draft.spouse_person_id || "" });
   syncPhoto(form, photoData);
 
-  form.elements.phone_number.addEventListener("input", () => {
-    form.elements.phone_number.value = onlyDigits(form.elements.phone_number.value).slice(0, 10);
-  });
-  form.elements.aadhaar_number.addEventListener("input", () => {
-    form.elements.aadhaar_number.value = formatAadhaar(form.elements.aadhaar_number.value);
-  });
+  form.elements.phone_number.addEventListener("input", () => { form.elements.phone_number.value = onlyDigits(form.elements.phone_number.value).slice(0, 10); });
+  form.elements.aadhaar_number.addEventListener("input", () => { form.elements.aadhaar_number.value = formatAadhaar(form.elements.aadhaar_number.value); });
   form.elements.photo_file.addEventListener("change", async () => {
     const file = form.elements.photo_file.files?.[0];
-    if (!file) return;
-    try {
-      photoData = await openPhotoPopup(file);
-      syncPhoto(form, photoData);
-      toast("Photo added to popup. Click Save Applicant to save.");
-    } catch (error) {
-      if (error.message !== "Photo cancelled.") toast(error.message || "Could not add photo.");
-    } finally {
-      form.elements.photo_file.value = "";
-    }
+    if (file) await applyPhotoEdit(file, form, setPhoto);
   });
-  $("[data-remove-photo]", form).addEventListener("click", () => { photoData = ""; syncPhoto(form, photoData); });
+  $("[data-edit-photo]", form).addEventListener("click", async () => { if (photoData) await applyPhotoEdit(photoData, form, setPhoto); });
+  $("[data-remove-photo]", form).addEventListener("click", () => setPhoto(""));
   $("[data-cancel]", form).addEventListener("click", () => shell.remove());
 
   [form.elements.person_id, form.elements.mapper_person_id, form.elements.father_person_id, form.elements.mother_person_id, form.elements.spouse_person_id].forEach(select => {
@@ -245,7 +235,7 @@ export async function openApplicantPopup(applicantId = "") {
     commitRef();
     shell.remove();
     toast("Applicant saved.");
-    location.reload();
+    document.dispatchEvent(new CustomEvent("sir:data-changed"));
   });
 }
 
