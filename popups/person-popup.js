@@ -108,7 +108,7 @@ export async function openPersonPopup(options = {}) {
   form.addEventListener("submit", event => {
     event.preventDefault();
     const person = readPerson(form, draft);
-    const errors = validatePerson(person, { requireEpic: false });
+    const errors = validatePerson(person, { requireEpic: false, people: activeState.people, editingId: person.person_id });
     if (hasEpicValidationError(errors) && !person.allow_nonstandard_epic) overrideRule.hidden = false;
     errorBox.style.display = errors.length ? "block" : "none";
     errorBox.textContent = errors.join("\n");
