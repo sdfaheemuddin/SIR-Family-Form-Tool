@@ -2,7 +2,8 @@
 import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 import { backupState, clearState } from "./storage.js";
 import { downloadJson } from "./importExport.js";
-import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-07-7";
+import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-07-8";
+import { initFamilyTree, renderFamilyTree } from "./family-tree.js?v=26-07-07-8";
 
 let stateRef;
 let commitRef;
@@ -10,49 +11,20 @@ let commitRef;
 const $ = selector => document.querySelector(selector);
 const $$ = selector => Array.from(document.querySelectorAll(selector));
 
-function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
-}
-
+function esc(value) { return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch])); }
 function clean(value) { return String(value ?? "").replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim(); }
 function dmy(value) { const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return match ? `${match[3]}-${match[2]}-${match[1]}` : String(value || ""); }
 function onlyValidPhoto(src) { return /^data:image\/(png|jpe?g|webp|gif);base64,/i.test(String(src || "")); }
 function safeFilePart(value) { return String(value || "applicant").trim().replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "applicant"; }
-
-function el(tag, props = {}) {
-  const node = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => { if (key === "class") node.className = value; else if (key === "text") node.textContent = value; else if (value !== undefined && value !== null) node.setAttribute(key, value); });
-  return node;
-}
-
+function el(tag, props = {}) { const node = document.createElement(tag); Object.entries(props).forEach(([key, value]) => { if (key === "class") node.className = value; else if (key === "text") node.textContent = value; else if (value !== undefined && value !== null) node.setAttribute(key, value); }); return node; }
 function personById(id) { return stateRef.people.find(person => person.person_id === id) || {}; }
 function personName(id) { return personById(id).name || ""; }
 function personEpic(id) { return personById(id).epic_number || ""; }
 
-function toast(message) {
-  const box = $("#toast");
-  if (!box) return;
-  box.textContent = message;
-  box.classList.add("show");
-  clearTimeout(toast.timer);
-  toast.timer = setTimeout(() => box.classList.remove("show"), 2200);
-}
-
-function applicantTopPhoto(applicant, name) {
-  if (!onlyValidPhoto(applicant.photo_data)) return "";
-  return `<div class="applicant-top-photo"><img class="readonly-photo small-top-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small photo-download-link" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download</a></div>`;
-}
-
-function readCell(label, value, copy = true, display = value) {
-  const cleanValue = clean(value);
-  return `<div class="copy-table-cell ${copy ? "copyable-cell" : "no-copy"}" ${copy ? `role="button" tabindex="0" data-copy="${esc(cleanValue)}" title="Click to copy"` : ""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div>${copy ? `<div class="copy-chip">Copy</div>` : ""}</div>`;
-}
-
-async function copyText(value) {
-  try { await navigator.clipboard.writeText(clean(value)); }
-  catch { const temp = document.createElement("textarea"); temp.value = clean(value); document.body.append(temp); temp.select(); document.execCommand("copy"); temp.remove(); }
-  toast("Copied.");
-}
+function toast(message) { const box = $("#toast"); if (!box) return; box.textContent = message; box.classList.add("show"); clearTimeout(toast.timer); toast.timer = setTimeout(() => box.classList.remove("show"), 2200); }
+function applicantTopPhoto(applicant, name) { if (!onlyValidPhoto(applicant.photo_data)) return ""; return `<div class="applicant-top-photo"><img class="readonly-photo small-top-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small photo-download-link" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download</a></div>`; }
+function readCell(label, value, copy = true, display = value) { const cleanValue = clean(value); return `<div class="copy-table-cell ${copy ? "copyable-cell" : "no-copy"}" ${copy ? `role="button" tabindex="0" data-copy="${esc(cleanValue)}" title="Click to copy"` : ""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div>${copy ? `<div class="copy-chip">Copy</div>` : ""}</div>`; }
+async function copyText(value) { try { await navigator.clipboard.writeText(clean(value)); } catch { const temp = document.createElement("textarea"); temp.value = clean(value); document.body.append(temp); temp.select(); document.execCommand("copy"); temp.remove(); } toast("Copied."); }
 
 function renderPeople() {
   const wrap = $("#peopleTableWrap");
@@ -70,7 +42,7 @@ function renderApplicants() {
 }
 
 function renderDatabaseTables() { renderPeople(); renderApplicants(); }
-function refreshScreen() { renderDatabaseTables(); renderReadonlyPicker(); renderFamilyTreePicker(); }
+function refreshScreen() { renderDatabaseTables(); renderReadonlyPicker(); renderFamilyTree(); }
 function pendingApplicants() { return stateRef.applicants.filter(applicant => !applicant.status_completed); }
 
 function renderReadonlyPicker() {
@@ -83,9 +55,7 @@ function renderReadonlyPicker() {
   renderReadonlyCard(select.value);
   syncReadonlyButtons();
 }
-
 function syncReadonlyButtons() { const hasSelection = Boolean($("#readonlyApplicantSelect")?.value); $("#markCompleteBtn").disabled = !hasSelection; $("#nextApplicantBtn").disabled = pendingApplicants().length < 2; const edit = $("#readonlyEditApplicantBtn"); if (edit) edit.disabled = !hasSelection; }
-
 function renderReadonlyCard(applicantId) {
   const box = $("#readonlyCard");
   const applicant = stateRef.applicants.find(row => row.applicant_id === applicantId);
@@ -100,43 +70,12 @@ function renderReadonlyCard(applicantId) {
   box.querySelectorAll("[data-copy]").forEach(node => { node.addEventListener("click", () => copyText(node.dataset.copy)); node.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); copyText(node.dataset.copy); } }); });
 }
 
-function treePersonCard(title, person, extra = "") {
-  if (!person?.person_id) return `<div class="tree-card missing"><div class="tree-role">${esc(title)}</div><div class="tree-name">Not selected</div></div>`;
-  const details = [person.epic_number ? `Current EPIC: ${person.epic_number}` : "", person.name_as_per_2002 ? `2002: ${person.name_as_per_2002}` : "", person.ac_no_2002 || person.part_no_2002 || person.sl_no_2002 ? `AC ${person.ac_no_2002 || "-"}, Part ${person.part_no_2002 || "-"}, Sl ${person.sl_no_2002 || "-"}` : ""].filter(Boolean);
-  return `<div class="tree-card"><div class="tree-role">${esc(title)}</div><div class="tree-name">${esc(person.name || "Unnamed")}</div>${extra ? `<div class="tree-extra">${esc(extra)}</div>` : ""}${details.map(row => `<div class="tree-detail">${esc(row)}</div>`).join("")}</div>`;
-}
-
-function renderFamilyTreePicker() {
-  const select = $("#familyTreeApplicantSelect");
-  if (!select) return;
-  const rows = stateRef.applicants;
-  const previous = select.dataset.selected || select.value || $("#readonlyApplicantSelect")?.value || "";
-  select.innerHTML = `<option value="">Select applicant</option>` + rows.map(applicant => `<option value="${esc(applicant.applicant_id)}">${esc(personName(applicant.person_id) || "Unnamed applicant")}</option>`).join("");
-  select.value = rows.some(applicant => applicant.applicant_id === previous) ? previous : (rows[0]?.applicant_id || "");
-  select.dataset.selected = select.value;
-  renderFamilyTree(select.value);
-}
-
-function renderFamilyTree(applicantId) {
-  const wrap = $("#familyTreeWrap");
-  if (!wrap) return;
-  const applicant = stateRef.applicants.find(row => row.applicant_id === applicantId);
-  if (!applicant) { wrap.innerHTML = `<div class="empty">Select applicant to view family tree.</div>`; return; }
-  const applicantPerson = personById(applicant.person_id);
-  const father = personById(applicant.father_person_id);
-  const mother = personById(applicant.mother_person_id);
-  const spouse = personById(applicant.spouse_person_id);
-  const mapper = personById(applicant.mapper_person_id);
-  const mapperNote = applicant.mapper_person_id === applicant.person_id ? "Mapper: Self" : `Mapper: ${applicant.mapper_relationship || ""}`;
-  wrap.innerHTML = `<div class="family-tree"><div class="tree-row parents">${treePersonCard("Father", father)}${treePersonCard("Mother", mother)}</div><div class="tree-connector"></div><div class="tree-row center">${treePersonCard("Applicant", applicantPerson, mapperNote)}</div><div class="tree-row partner">${treePersonCard("Spouse", spouse)}</div><section class="tree-mapping-panel"><h4>Mapping Person</h4>${treePersonCard(applicant.mapper_relationship || "Mapper", mapper, mapper.person_id === applicantPerson.person_id ? "Same as applicant" : "")}</section></div>`;
-}
-
 function deletePerson(personId) { const used = stateRef.applicants.some(applicant => [applicant.person_id, applicant.mapper_person_id, applicant.father_person_id, applicant.mother_person_id, applicant.spouse_person_id].filter(Boolean).includes(personId)); if (used) return toast("Cannot delete: person is used in applicants."); if (!confirm(`Delete person ${personName(personId)}?`)) return; stateRef.people = stateRef.people.filter(person => person.person_id !== personId); commitRef(); refreshScreen(); }
 function deleteApplicant(applicantId) { const applicant = stateRef.applicants.find(row => row.applicant_id === applicantId); if (!confirm(`Delete applicant ${personName(applicant?.person_id)}?`)) return; stateRef.applicants = stateRef.applicants.filter(row => row.applicant_id !== applicantId); commitRef(); refreshScreen(); }
 function selectNext(currentId = "") { const rows = pendingApplicants(); const select = $("#readonlyApplicantSelect"); if (!rows.length) { select.dataset.selected = ""; renderReadonlyPicker(); toast("All applicants completed."); return; } const index = rows.findIndex(applicant => applicant.applicant_id === currentId); select.dataset.selected = rows[index >= 0 ? (index + 1) % rows.length : 0].applicant_id; renderReadonlyPicker(); }
 function markComplete() { const id = $("#readonlyApplicantSelect").value; const applicant = stateRef.applicants.find(row => row.applicant_id === id); if (!applicant) return; applicant.status_completed = true; commitRef(); renderDatabaseTables(); selectNext(id); }
 function clearAll() { if (confirm("Before clearing, export a JSON backup now? Press OK to export, Cancel to continue without exporting.")) downloadJson(stateRef); if (!confirm("Clear all people and applicants from this device? This cannot be undone unless you have a JSON backup.")) return; backupState(stateRef); stateRef.people = []; stateRef.applicants = []; clearState(); refreshScreen(); toast("All data cleared. A local backup was stored."); }
-function initTabs() { $$('[data-tab-target]').forEach(button => button.addEventListener("click", () => { $$(".tab-btn").forEach(tab => tab.classList.toggle("active", tab === button)); $$(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === button.dataset.tabTarget)); if (button.dataset.tabTarget === "databaseTab") renderDatabaseTables(); if (button.dataset.tabTarget === "familyTreeTab") renderFamilyTreePicker(); })); }
+function initTabs() { $$('[data-tab-target]').forEach(button => button.addEventListener("click", () => { $$(".tab-btn").forEach(tab => tab.classList.toggle("active", tab === button)); $$(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === button.dataset.tabTarget)); if (button.dataset.tabTarget === "databaseTab") renderDatabaseTables(); if (button.dataset.tabTarget === "familyTreeTab") renderFamilyTree(); })); }
 function initZoom() { const key = "sir_family_forms_zoom"; const apply = value => { const zoom = Math.min(1.3, Math.max(0.8, Number(value) || 1)); document.documentElement.style.setProperty("--app-zoom", zoom); localStorage.setItem(key, zoom); }; apply(localStorage.getItem(key) || 1); $("#zoomOutBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) - 0.1).toFixed(2))); $("#zoomResetBtn")?.addEventListener("click", () => apply(1)); $("#zoomInBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) + 0.1).toFixed(2))); }
 function addVersion() { if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-07" })); }
-export function initUI(state, commit) { stateRef = state; commitRef = commit; initTabs(); initZoom(); addVersion(); initFileActions({ state: stateRef, commit: commitRef, renderAll: refreshScreen, toast }); $("#clearDataBtn").addEventListener("click", clearAll); $("#readonlyApplicantSelect").addEventListener("change", event => { event.target.dataset.selected = event.target.value; renderReadonlyCard(event.target.value); syncReadonlyButtons(); }); $("#familyTreeApplicantSelect")?.addEventListener("change", event => { event.target.dataset.selected = event.target.value; renderFamilyTree(event.target.value); }); $("#markCompleteBtn").addEventListener("click", markComplete); $("#nextApplicantBtn").addEventListener("click", () => selectNext($("#readonlyApplicantSelect").value)); document.addEventListener("sir:data-changed", event => { if (event.detail?.selectedApplicantId) { $("#readonlyApplicantSelect").dataset.selected = event.detail.selectedApplicantId; const treeSelect = $("#familyTreeApplicantSelect"); if (treeSelect) treeSelect.dataset.selected = event.detail.selectedApplicantId; } refreshScreen(); }); refreshScreen(); }
+export async function initUI(state, commit) { stateRef = state; commitRef = commit; initTabs(); initZoom(); addVersion(); await initFamilyTree(stateRef); initFileActions({ state: stateRef, commit: commitRef, renderAll: refreshScreen, toast }); $("#clearDataBtn").addEventListener("click", clearAll); $("#readonlyApplicantSelect").addEventListener("change", event => { event.target.dataset.selected = event.target.value; renderReadonlyCard(event.target.value); syncReadonlyButtons(); }); $("#markCompleteBtn").addEventListener("click", markComplete); $("#nextApplicantBtn").addEventListener("click", () => selectNext($("#readonlyApplicantSelect").value)); document.addEventListener("sir:data-changed", event => { if (event.detail?.selectedApplicantId) $("#readonlyApplicantSelect").dataset.selected = event.detail.selectedApplicantId; refreshScreen(); }); refreshScreen(); }
