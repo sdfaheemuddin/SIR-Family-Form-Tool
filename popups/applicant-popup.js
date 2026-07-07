@@ -1,8 +1,9 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, hasEpic, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-06-add-new-state";
-import { openPhotoPopup } from "./photo-popup.js";
+import { openPersonPopup } from "./person-popup.js?v=26-07-06-ui-polish";
+import { openPhotoPopup } from "./photo-popup.js?v=26-07-06-ui-polish";
 
 const ADD_NEW = "__add_new__";
+const DOB_MAX = "2009-12-31";
 let stateRef;
 let commitRef;
 let templateText = "";
@@ -11,7 +12,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-06-add-new-state");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-06-ui-polish");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
@@ -155,6 +156,15 @@ async function handleAddNew(select, form, draft) {
   return true;
 }
 
+function applicantErrors(applicant) {
+  const result = validateApplicant(applicant, stateRef.people, stateRef.applicants, applicant.applicant_id);
+  const errors = result.errors.filter(error => !/Aadhaar/i.test(error));
+  if (applicant.date_of_birth && applicant.date_of_birth > DOB_MAX) {
+    errors.push("Date of Birth must be on or before 31-12-2009.");
+  }
+  return { ...result, errors };
+}
+
 export async function openApplicantPopup(applicantId = "") {
   const existing = stateRef.applicants.find(a => a.applicant_id === applicantId);
   const draft = existing ? { ...existing } : blankApplicant();
@@ -169,6 +179,7 @@ export async function openApplicantPopup(applicantId = "") {
   form.elements.phone_number.value = draft.phone_number || "";
   form.elements.aadhaar_number.value = formatAadhaar(draft.aadhaar_number || "");
   form.elements.date_of_birth.value = draft.date_of_birth || "";
+  form.elements.date_of_birth.max = DOB_MAX;
   setSelects(form, draft, {
     applicant: draft.person_id || "",
     mapper: draft.mapper_person_id || "",
@@ -223,11 +234,11 @@ export async function openApplicantPopup(applicantId = "") {
       spouse_person_id: form.elements.spouse_person_id.value,
       photo_data: photoData
     });
-    const result = validateApplicant(applicant, stateRef.people, stateRef.applicants, applicant.applicant_id);
+    const result = applicantErrors(applicant);
     errorBox.style.display = result.errors.length ? "block" : "none";
     errorBox.textContent = result.errors.join("\n");
     if (result.errors.length) return;
-    if (result.duplicateAadhaarApplicant && !confirm("Another applicant has the same Aadhaar number. Save anyway?")) return;
+    if (result.duplicateAadhaarApplicant && applicant.aadhaar_number && !confirm("Another applicant has the same Aadhaar number. Save anyway?")) return;
     const index = stateRef.applicants.findIndex(a => a.applicant_id === applicant.applicant_id);
     if (index >= 0) stateRef.applicants[index] = applicant;
     else stateRef.applicants.push(applicant);
