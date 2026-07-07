@@ -11,6 +11,8 @@ button:hover,.file-btn:hover,.button-link:hover{filter:brightness(.95)}
 button.secondary,.file-btn.secondary{background:#eaf3ef;color:var(--green);border:1.5px solid var(--line)}
 button.danger,.danger{background:var(--danger)!important;color:#fff!important}
 .small{padding:.4rem .6rem;font-size:.82rem}
+.icon-btn{width:42px;min-width:42px;padding:.55rem .45rem;font-size:1rem;line-height:1}
+.inline-select-action{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.45rem;align-items:center}
 .file-btn{position:relative;overflow:hidden;background:#eaf3ef;color:var(--green);border:1.5px solid var(--line)}
 .file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .app-disclaimer{margin:.75rem 1rem 0;padding:.65rem .8rem;border:1.5px solid #f0d58a;background:#fff8df;color:#5d4300;font-weight:700;border-radius:10px}
