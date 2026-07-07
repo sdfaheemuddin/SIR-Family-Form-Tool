@@ -1,6 +1,6 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-07-4";
-import { openPhotoPopup } from "./photo-popup.js?v=26-07-07-4";
+import { openPersonPopup } from "./person-popup.js?v=26-07-07-6";
+import { openPhotoPopup } from "./photo-popup.js?v=26-07-07-6";
 
 const ADD_NEW = "__add_new__";
 const DOB_MAX = "2009-12-31";
@@ -12,7 +12,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-07-4");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-07-6");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
@@ -167,6 +167,7 @@ export async function openApplicantPopup(applicantId = "") {
   form.elements.date_of_birth.value = draft.date_of_birth || "";
   form.elements.date_of_birth.max = DOB_MAX;
   setSelects(form, draft, { applicant: draft.person_id || "", mapper: draft.mapper_person_id || "", father: draft.father_person_id || "", mother: draft.mother_person_id || "", spouse: draft.spouse_person_id || "" });
+  disableSelect(form.elements.person_id, Boolean(existing));
   syncPhoto(form, photoData);
   form.elements.phone_number.addEventListener("input", () => { form.elements.phone_number.value = onlyDigits(form.elements.phone_number.value).slice(0, 10); });
   form.elements.aadhaar_number.addEventListener("input", () => { form.elements.aadhaar_number.value = formatAadhaar(form.elements.aadhaar_number.value); });
@@ -179,6 +180,7 @@ export async function openApplicantPopup(applicantId = "") {
     await openPersonPopup({ state: stateRef, commit: commitRef, personId, fromApplicant: true, onSaved: person => {
       if (!person) return;
       setSelects(form, draft, { applicant: person.person_id, mapper: form.elements.mapper_person_id.value, father: form.elements.father_person_id.value, mother: form.elements.mother_person_id.value, spouse: form.elements.spouse_person_id.value });
+      disableSelect(form.elements.person_id, Boolean(existing));
       document.dispatchEvent(new CustomEvent("sir:data-changed"));
     }});
   });
@@ -187,9 +189,13 @@ export async function openApplicantPopup(applicantId = "") {
     select.addEventListener("change", async () => {
       if (await handleAddNew(select, form, draft)) return;
       setSelects(form, draft);
+      disableSelect(form.elements.person_id, Boolean(existing));
     });
   });
-  form.elements.mapper_relationship.addEventListener("change", () => setSelects(form, draft));
+  form.elements.mapper_relationship.addEventListener("change", () => {
+    setSelects(form, draft);
+    disableSelect(form.elements.person_id, Boolean(existing));
+  });
   form.addEventListener("submit", event => {
     event.preventDefault();
     const applicant = normalizeApplicant({ ...draft, person_id: form.elements.person_id.value, mapper_relationship: form.elements.mapper_relationship.value, mapper_person_id: form.elements.mapper_person_id.value, phone_number: form.elements.phone_number.value, aadhaar_number: form.elements.aadhaar_number.value, date_of_birth: form.elements.date_of_birth.value, father_person_id: form.elements.father_person_id.value, mother_person_id: form.elements.mother_person_id.value, spouse_person_id: form.elements.spouse_person_id.value, photo_data: photoData });
