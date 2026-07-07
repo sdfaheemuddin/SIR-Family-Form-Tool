@@ -113,6 +113,19 @@ export function hasEpic(person) {
   return Boolean(person && person.epic_number);
 }
 
+function same2002Serial(a, b) {
+  const pa = normalizePerson(a);
+  const pb = normalizePerson(b);
+  return Boolean(
+    pa.is_2002_available && pb.is_2002_available &&
+    pa.state_2002 && pb.state_2002 && pa.state_2002.toLowerCase() === pb.state_2002.toLowerCase() &&
+    pa.district_2002 && pb.district_2002 && pa.district_2002.toLowerCase() === pb.district_2002.toLowerCase() &&
+    pa.ac_no_2002 && pb.ac_no_2002 && pa.ac_no_2002 === pb.ac_no_2002 &&
+    pa.part_no_2002 && pb.part_no_2002 && pa.part_no_2002 === pb.part_no_2002 &&
+    pa.sl_no_2002 && pb.sl_no_2002 && pa.sl_no_2002 === pb.sl_no_2002
+  );
+}
+
 export function validatePerson(person, options = {}) {
   const p = normalizePerson(person);
   const errors = [];
@@ -128,41 +141,32 @@ export function validatePerson(person, options = {}) {
     if (!p.part_no_2002) errors.push("Part No is mandatory when 2002 list is checked.");
     if (!p.sl_no_2002) errors.push("Serial No is mandatory when 2002 list is checked.");
   }
+  const people = Array.isArray(options.people) ? options.people.map(normalizePerson) : [];
+  const editingId = options.editingId || p.person_id;
+  if (p.epic_number && people.some(x => x.person_id !== editingId && x.epic_number && x.epic_number === p.epic_number)) {
+    errors.push("Current EPIC Number must be unique.");
+  }
+  if (p.is_2002_available && p.sl_no_2002 && people.some(x => x.person_id !== editingId && same2002Serial(p, x))) {
+    errors.push("2002 Sl No must be unique for the same State, District, AC No and Part No.");
+  }
   return errors;
 }
-
 
 export function validateMappingNames(applicant, people) {
   const a = normalizeApplicant(applicant);
   const byId = new Map(people.map(p => [p.person_id, p]));
   const errors = [];
-
   if (!a.mapper_relationship || !a.mapper_person_id) return errors;
-
   const mapper = byId.get(a.mapper_person_id);
   const applicantPerson = byId.get(a.person_id);
   const father = byId.get(a.father_person_id);
   const mother = byId.get(a.mother_person_id);
-
-  if (a.mapper_relationship === "Self" && a.person_id && a.mapper_person_id !== a.person_id) {
-    errors.push(`Mapping relation is Self, so Mapping Name must be the applicant name${applicantPerson?.name ? ` (${applicantPerson.name})` : ""}.`);
-  }
-
-  if (a.mapper_relationship === "Father" && a.father_person_id && a.mapper_person_id !== a.father_person_id) {
-    errors.push(`Mapping relation is Father, so Mapping Name must match Father${father?.name ? ` (${father.name})` : ""}.`);
-  }
-
-  if (a.mapper_relationship === "Mother" && a.mother_person_id && a.mapper_person_id !== a.mother_person_id) {
-    errors.push(`Mapping relation is Mother, so Mapping Name must match Mother${mother?.name ? ` (${mother.name})` : ""}.`);
-  }
-
+  if (a.mapper_relationship === "Self" && a.person_id && a.mapper_person_id !== a.person_id) errors.push(`Mapping relation is Self, so Mapping Name must be the applicant name${applicantPerson?.name ? ` (${applicantPerson.name})` : ""}.`);
+  if (a.mapper_relationship === "Father" && a.father_person_id && a.mapper_person_id !== a.father_person_id) errors.push(`Mapping relation is Father, so Mapping Name must match Father${father?.name ? ` (${father.name})` : ""}.`);
+  if (a.mapper_relationship === "Mother" && a.mother_person_id && a.mapper_person_id !== a.mother_person_id) errors.push(`Mapping relation is Mother, so Mapping Name must match Mother${mother?.name ? ` (${mother.name})` : ""}.`);
   if ((a.mapper_relationship === "Grandfather" || a.mapper_relationship === "Grandmother") && mapper) {
-    // Grandparent names cannot be auto-verified because only father/mother/spouse fields exist.
-    if ([a.person_id, a.father_person_id, a.mother_person_id].filter(Boolean).includes(a.mapper_person_id)) {
-      errors.push(`Mapping relation is ${a.mapper_relationship}, so Mapping Name should be the applicant's ${a.mapper_relationship.toLowerCase()}, not applicant/father/mother.`);
-    }
+    if ([a.person_id, a.father_person_id, a.mother_person_id].filter(Boolean).includes(a.mapper_person_id)) errors.push(`Mapping relation is ${a.mapper_relationship}, so Mapping Name should be the applicant's ${a.mapper_relationship.toLowerCase()}, not applicant/father/mother.`);
   }
-
   return errors;
 }
 
@@ -172,7 +176,6 @@ export function validateApplicant(applicant, people, applicants = [], editingId 
   const byId = new Map(people.map(p => [p.person_id, p]));
   const person = byId.get(a.person_id);
   const mapper = byId.get(a.mapper_person_id);
-
   if (!a.person_id || !person) errors.push("Applicant name/person is mandatory.");
   if (person && !person.epic_number) errors.push("Applicant person must have an EPIC number.");
   if (!a.mapper_person_id || !mapper) errors.push("Mapper is mandatory.");
@@ -182,42 +185,29 @@ export function validateApplicant(applicant, people, applicants = [], editingId 
   if (!a.mother_person_id || !byId.has(a.mother_person_id)) errors.push("Mother is mandatory.");
   if (!a.phone_number) errors.push("Phone number is mandatory.");
   if (a.phone_number && !/^\d{10}$/.test(a.phone_number)) errors.push("Phone number must be exactly 10 digits.");
-  if (!a.aadhaar_number) errors.push("Aadhaar number is mandatory.");
   if (a.aadhaar_number && !/^\d{12}$/.test(a.aadhaar_number)) errors.push("Aadhaar number must be exactly 12 digits.");
   if (!a.date_of_birth) errors.push("Date of Birth is mandatory.");
   if (a.spouse_person_id && !byId.has(a.spouse_person_id)) errors.push("Selected spouse was not found in People Database.");
-
   if (a.mapper_relationship === "Self") {
     if (a.mapper_person_id !== a.person_id) errors.push("For Self mapping, Mapper Name must be the same as Applicant Name.");
     if (person && !has2002Details(person)) errors.push("For Self mapping, the applicant must have complete 2002 details.");
   }
-  if (a.mapper_relationship === "Father" && a.mapper_person_id !== a.father_person_id) {
-    errors.push("For Father mapping, Father must be auto-filled from Mapper Name.");
-  }
-  if (a.mapper_relationship === "Mother" && a.mapper_person_id !== a.mother_person_id) {
-    errors.push("For Mother mapping, Mother must be auto-filled from Mapper Name.");
-  }
+  if (a.mapper_relationship === "Father" && a.mapper_person_id !== a.father_person_id) errors.push("For Father mapping, Father must be auto-filled from Mapper Name.");
+  if (a.mapper_relationship === "Mother" && a.mapper_person_id !== a.mother_person_id) errors.push("For Mother mapping, Mother must be auto-filled from Mapper Name.");
   if (a.father_person_id && a.father_person_id === a.person_id) errors.push("Father cannot be the same as Applicant Name.");
   if (a.mother_person_id && a.mother_person_id === a.person_id) errors.push("Mother cannot be the same as Applicant Name.");
   if (a.mother_person_id && a.mother_person_id === a.father_person_id) errors.push("Mother cannot be the same as Father.");
-  if (a.spouse_person_id && [a.person_id, a.mapper_person_id, a.father_person_id, a.mother_person_id].includes(a.spouse_person_id)) {
-    errors.push("Spouse must be different from applicant, mapper, father, and mother.");
-  }
-
+  if (a.spouse_person_id && [a.person_id, a.mapper_person_id, a.father_person_id, a.mother_person_id].includes(a.spouse_person_id)) errors.push("Spouse must be different from applicant, mapper, father, and mother.");
   errors.push(...validateMappingNames(a, people));
-
   const usedApplicant = applicants.find(x => x.applicant_id !== editingId && x.person_id && x.person_id === a.person_id);
   if (usedApplicant) errors.push("This person is already saved as an applicant.");
-
   const duplicate = applicants.find(x => x.applicant_id !== editingId && x.aadhaar_number && x.aadhaar_number === a.aadhaar_number);
+  if (duplicate && a.aadhaar_number) errors.push("Aadhaar number must be unique.");
   return { errors, duplicateAadhaarApplicant: duplicate || null };
 }
 
 export function personReferences(personId, applicants) {
-  return applicants.filter(a =>
-    [a.person_id, a.mapper_person_id, a.father_person_id, a.mother_person_id, a.spouse_person_id]
-      .filter(Boolean).includes(personId)
-  );
+  return applicants.filter(a => [a.person_id, a.mapper_person_id, a.father_person_id, a.mother_person_id, a.spouse_person_id].filter(Boolean).includes(personId));
 }
 
 export function buildReadonly(applicant, people) {
@@ -227,7 +217,6 @@ export function buildReadonly(applicant, people) {
   const father = byId.get(applicant.father_person_id) || {};
   const mother = byId.get(applicant.mother_person_id) || {};
   const spouse = byId.get(applicant.spouse_person_id) || {};
-
   return {
     applicant_id: applicant.applicant_id,
     applicant_name: person.name || "",
