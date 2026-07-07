@@ -39,30 +39,13 @@ function openShell(title) {
 function optionList({ filter = null, exclude = new Set(), add = true, blank = true, force = [] } = {}) {
   const forced = force.map(id => stateRef.people.find(p => p.person_id === id)).filter(Boolean);
   const forcedIds = new Set(forced.map(p => p.person_id));
-  const rows = stateRef.people
-    .filter(p => !forcedIds.has(p.person_id))
-    .filter(p => !filter || filter(p))
-    .filter(p => !exclude.has(p.person_id))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  return [
-    blank ? `<option value="">Select</option>` : "",
-    add ? `<option value="${ADD_NEW}">Add New</option>` : "",
-    ...forced.concat(rows).map(p => `<option value="${p.person_id}">${p.name}${p.epic_number ? " — " + p.epic_number : ""}${has2002Details(p) ? " — 2002" : ""}</option>`)
-  ].join("");
+  const rows = stateRef.people.filter(p => !forcedIds.has(p.person_id)).filter(p => !filter || filter(p)).filter(p => !exclude.has(p.person_id)).sort((a, b) => a.name.localeCompare(b.name));
+  return [blank ? `<option value="">Select</option>` : "", add ? `<option value="${ADD_NEW}">Add New</option>` : "", ...forced.concat(rows).map(p => `<option value="${p.person_id}">${p.name}${p.epic_number ? " — " + p.epic_number : ""}${has2002Details(p) ? " — 2002" : ""}</option>`)].join("");
 }
 
-function keep(select, value) {
-  if (value && [...select.options].some(option => option.value === value)) select.value = value;
-}
-
-function safeChoice(value, exclude) {
-  return value && !exclude.has(value) ? value : "";
-}
-
-function disableSelect(select, disabled) {
-  select.disabled = Boolean(disabled);
-  select.closest("label")?.classList.toggle("disabled-field", Boolean(disabled));
-}
+function keep(select, value) { if (value && [...select.options].some(option => option.value === value)) select.value = value; }
+function safeChoice(value, exclude) { return value && !exclude.has(value) ? value : ""; }
+function disableSelect(select, disabled) { select.disabled = Boolean(disabled); select.closest("label")?.classList.toggle("disabled-field", Boolean(disabled)); }
 
 function syncPhoto(form, photoData) {
   const preview = $("[data-photo-preview]", form);
@@ -84,11 +67,9 @@ function setSelects(form, draft, forcedValues = null) {
   const spouse = form.elements.spouse_person_id;
   const usedApplicants = new Set(stateRef.applicants.filter(a => a.applicant_id !== draft.applicant_id).map(a => a.person_id));
   const old = forcedValues || { applicant: applicant.value, mapper: mapper.value, father: father.value, mother: mother.value, spouse: spouse.value };
-
   applicant.innerHTML = optionList({ exclude: usedApplicants, force: old.applicant ? [old.applicant] : [] });
   keep(applicant, old.applicant);
   const applicantId = applicant.value || "";
-
   if (relation.value === "Self") {
     mapper.innerHTML = optionList({ add: false, blank: false, force: applicantId ? [applicantId] : [] });
     mapper.value = applicantId || "";
@@ -99,7 +80,6 @@ function setSelects(form, draft, forcedValues = null) {
     disableSelect(mapper, false);
   }
   const mapperId = mapper.value || "";
-
   if (relation.value === "Father" && mapperId) {
     father.innerHTML = optionList({ add: false, blank: false, force: [mapperId] });
     father.value = mapperId;
@@ -112,7 +92,6 @@ function setSelects(form, draft, forcedValues = null) {
     disableSelect(father, false);
   }
   const fatherId = father.value || "";
-
   if (relation.value === "Mother" && mapperId) {
     mother.innerHTML = optionList({ add: false, blank: false, force: [mapperId] });
     mother.value = mapperId;
@@ -125,7 +104,6 @@ function setSelects(form, draft, forcedValues = null) {
     disableSelect(mother, false);
   }
   const motherId = mother.value || "";
-
   const spouseExclude = new Set([applicantId, mapperId, fatherId, motherId].filter(Boolean));
   const spouseValue = safeChoice(old.spouse, spouseExclude);
   spouse.innerHTML = optionList({ exclude: spouseExclude, force: spouseValue ? [spouseValue] : [] });
@@ -137,25 +115,19 @@ async function handleAddNew(select, form, draft) {
   select.value = "";
   const isApplicant = select.name === "person_id";
   const isMapper = select.name === "mapper_person_id";
-  await openPersonPopup({
-    state: stateRef,
-    commit: commitRef,
-    fromApplicant: isApplicant,
-    fromMapper: isMapper,
-    onSaved: person => {
-      if (!person) return;
-      setSelects(form, draft);
-      select.value = person.person_id;
-      setSelects(form, draft);
-      document.dispatchEvent(new CustomEvent("sir:data-changed"));
-    }
-  });
+  await openPersonPopup({ state: stateRef, commit: commitRef, fromApplicant: isApplicant, fromMapper: isMapper, onSaved: person => {
+    if (!person) return;
+    setSelects(form, draft);
+    select.value = person.person_id;
+    setSelects(form, draft);
+    document.dispatchEvent(new CustomEvent("sir:data-changed"));
+  }});
   return true;
 }
 
 function applicantErrors(applicant) {
   const result = validateApplicant(applicant, stateRef.people, stateRef.applicants, applicant.applicant_id);
-  const errors = result.errors.filter(error => !/Aadhaar/i.test(error));
+  const errors = [...result.errors];
   if (applicant.date_of_birth && applicant.date_of_birth > DOB_MAX) errors.push("Date of Birth must be on or before 31-12-2009.");
   return { ...result, errors };
 }
@@ -181,7 +153,6 @@ export async function openApplicantPopup(applicantId = "") {
   const errorBox = form.querySelector("[data-error]");
   let photoData = draft.photo_data || "";
   const setPhoto = data => { photoData = data || ""; syncPhoto(form, photoData); };
-
   form.elements.mapper_relationship.innerHTML = `<option value="">Select</option>` + RELATIONSHIPS.map(r => `<option value="${r}">${r}</option>`).join("");
   form.elements.mapper_relationship.value = draft.mapper_relationship || "";
   form.elements.phone_number.value = draft.phone_number || "";
@@ -190,17 +161,12 @@ export async function openApplicantPopup(applicantId = "") {
   form.elements.date_of_birth.max = DOB_MAX;
   setSelects(form, draft, { applicant: draft.person_id || "", mapper: draft.mapper_person_id || "", father: draft.father_person_id || "", mother: draft.mother_person_id || "", spouse: draft.spouse_person_id || "" });
   syncPhoto(form, photoData);
-
   form.elements.phone_number.addEventListener("input", () => { form.elements.phone_number.value = onlyDigits(form.elements.phone_number.value).slice(0, 10); });
   form.elements.aadhaar_number.addEventListener("input", () => { form.elements.aadhaar_number.value = formatAadhaar(form.elements.aadhaar_number.value); });
-  form.elements.photo_file.addEventListener("change", async () => {
-    const file = form.elements.photo_file.files?.[0];
-    if (file) await applyPhotoEdit(file, form, setPhoto);
-  });
+  form.elements.photo_file.addEventListener("change", async () => { const file = form.elements.photo_file.files?.[0]; if (file) await applyPhotoEdit(file, form, setPhoto); });
   $("[data-edit-photo]", form).addEventListener("click", async () => { if (photoData) await applyPhotoEdit(photoData, form, setPhoto); });
   $("[data-remove-photo]", form).addEventListener("click", () => setPhoto(""));
   $("[data-cancel]", form).addEventListener("click", () => shell.remove());
-
   [form.elements.person_id, form.elements.mapper_person_id, form.elements.father_person_id, form.elements.mother_person_id, form.elements.spouse_person_id].forEach(select => {
     select.addEventListener("change", async () => {
       if (await handleAddNew(select, form, draft)) return;
@@ -208,27 +174,13 @@ export async function openApplicantPopup(applicantId = "") {
     });
   });
   form.elements.mapper_relationship.addEventListener("change", () => setSelects(form, draft));
-
   form.addEventListener("submit", event => {
     event.preventDefault();
-    const applicant = normalizeApplicant({
-      ...draft,
-      person_id: form.elements.person_id.value,
-      mapper_relationship: form.elements.mapper_relationship.value,
-      mapper_person_id: form.elements.mapper_person_id.value,
-      phone_number: form.elements.phone_number.value,
-      aadhaar_number: form.elements.aadhaar_number.value,
-      date_of_birth: form.elements.date_of_birth.value,
-      father_person_id: form.elements.father_person_id.value,
-      mother_person_id: form.elements.mother_person_id.value,
-      spouse_person_id: form.elements.spouse_person_id.value,
-      photo_data: photoData
-    });
+    const applicant = normalizeApplicant({ ...draft, person_id: form.elements.person_id.value, mapper_relationship: form.elements.mapper_relationship.value, mapper_person_id: form.elements.mapper_person_id.value, phone_number: form.elements.phone_number.value, aadhaar_number: form.elements.aadhaar_number.value, date_of_birth: form.elements.date_of_birth.value, father_person_id: form.elements.father_person_id.value, mother_person_id: form.elements.mother_person_id.value, spouse_person_id: form.elements.spouse_person_id.value, photo_data: photoData });
     const result = applicantErrors(applicant);
     errorBox.style.display = result.errors.length ? "block" : "none";
     errorBox.textContent = result.errors.join("\n");
     if (result.errors.length) return;
-    if (result.duplicateAadhaarApplicant && applicant.aadhaar_number && !confirm("Another applicant has the same Aadhaar number. Save anyway?")) return;
     const index = stateRef.applicants.findIndex(a => a.applicant_id === applicant.applicant_id);
     if (index >= 0) stateRef.applicants[index] = applicant;
     else stateRef.applicants.push(applicant);
@@ -251,9 +203,6 @@ export function initApplicantPopupOverrides(state, commit) {
     let id = editButton?.dataset.editApplicant || "";
     if (editButton && editButton.id === "readonlyEditApplicantBtn") id = $("#readonlyApplicantSelect")?.value || "";
     if (editButton && !id) return toast("Select an applicant first.");
-    openApplicantPopup(id).catch(error => {
-      console.error(error);
-      alert(error.message || "Could not open Applicant popup.");
-    });
+    openApplicantPopup(id).catch(error => { console.error(error); alert(error.message || "Could not open Applicant popup."); });
   }, true);
 }
