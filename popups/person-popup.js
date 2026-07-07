@@ -4,7 +4,7 @@ let stateRef;
 let commitRef;
 let templateText = "";
 
-const VERSION = "26-07-06-ui-polish";
+const VERSION = "26-07-07";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
@@ -109,9 +109,7 @@ export async function openPersonPopup(options = {}) {
     event.preventDefault();
     const person = readPerson(form, draft);
     const errors = validatePerson(person, { requireEpic: false });
-    if (hasEpicValidationError(errors) && !person.allow_nonstandard_epic) {
-      overrideRule.hidden = false;
-    }
+    if (hasEpicValidationError(errors) && !person.allow_nonstandard_epic) overrideRule.hidden = false;
     errorBox.style.display = errors.length ? "block" : "none";
     errorBox.textContent = errors.join("\n");
     if (errors.length) return;
@@ -122,7 +120,7 @@ export async function openPersonPopup(options = {}) {
     modal.remove();
     toast("Person saved.");
     if (onSaved) onSaved(fromMapper && !has2002Details(person) ? null : person, person);
-    else location.reload();
+    document.dispatchEvent(new CustomEvent("sir:data-changed"));
   });
 }
 
