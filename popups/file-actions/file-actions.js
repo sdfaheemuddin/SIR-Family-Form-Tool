@@ -1,20 +1,13 @@
 import { backupState } from "../../storage.js";
 import { parseImportFile, sirFileBaseFromState } from "../../importExport.js";
 import { generatePdf, generateOfflinePdf } from "../../pdf.js";
-import { onlyDigits } from "../../core.js";
+import { has2002Details, onlyDigits } from "../../core.js";
 
 let modalDepth = 0;
-
 const $ = selector => document.querySelector(selector);
 
 function esc(value) {
-  return String(value ?? "").replace(/[&<>"']/g, ch => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;"
-  }[ch]));
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
 }
 
 function el(tag, props = {}, children = []) {
@@ -36,12 +29,7 @@ function openModal(title, content) {
   const backdrop = el("div", { class: "modal-backdrop" });
   backdrop.style.zIndex = String(1000 + modalDepth * 20);
   const modal = el("div", { class: "modal" });
-  const close = el("button", {
-    type: "button",
-    class: "small secondary",
-    text: "Close",
-    onclick: () => closeModal(backdrop)
-  });
+  const close = el("button", { type: "button", class: "small secondary", text: "Close", onclick: () => closeModal(backdrop) });
   modal.append(el("div", { class: "modal-head" }, [el("h3", { text: title }), close]), content);
   backdrop.append(modal);
   root.append(backdrop);
@@ -71,18 +59,29 @@ function filteredState(source, applicantIds, personIds = []) {
   const selectedPeople = new Set(personIds);
   const applicants = source.applicants.filter(applicant => selectedApplicants.has(applicant.applicant_id));
   applicants.forEach(applicant => relatedPersonIds(applicant).forEach(id => selectedPeople.add(id)));
-  return {
-    people: source.people.filter(person => selectedPeople.has(person.person_id)),
-    applicants
-  };
+  return { people: source.people.filter(person => selectedPeople.has(person.person_id)), applicants };
+}
+
+function personById(source, id) {
+  return source.people.find(person => person.person_id === id) || {};
 }
 
 function hasAadhaar(applicant) {
   return onlyDigits(applicant?.aadhaar_number || "").length === 12;
 }
 
-function selectionModal({ title, actionLabel, source, includePeople, requireAadhaar = false, onConfirm }) {
-  const eligibleApplicants = applicant => !requireAadhaar || hasAadhaar(applicant);
+function offlineReady(source, applicant) {
+  return has2002Details(personById(source, applicant.mapper_person_id));
+}
+
+function eligibility(applicant, source, mode) {
+  if (mode === "online" && !hasAadhaar(applicant)) return { ok: false, message: "Aadhaar number not provided, it's mandatory for online." };
+  if (mode === "offline" && !offlineReady(source, applicant)) return { ok: false, message: "Complete 2002 details not provided, it's mandatory for offline." };
+  return { ok: true, message: "" };
+}
+
+function selectionModal({ title, actionLabel, source, includePeople, mode = "json", onConfirm }) {
+  const eligibleApplicants = applicant => eligibility(applicant, source, mode).ok;
   const selectedApplicants = new Set(source.applicants.filter(eligibleApplicants).map(applicant => applicant.applicant_id));
   const manualPeople = new Set(includePeople ? source.people.map(person => person.person_id) : []);
   const body = el("div", { class: "selection-modal-content" });
@@ -92,8 +91,7 @@ function selectionModal({ title, actionLabel, source, includePeople, requireAadh
     const locked = includePeople ? lockedPeople(source, selectedApplicants) : new Set();
     const selectableApplicants = source.applicants.filter(eligibleApplicants);
     const allSelected = selectableApplicants.length > 0 && selectableApplicants.every(applicant => selectedApplicants.has(applicant.applicant_id)) && (!includePeople || source.people.every(person => locked.has(person.person_id) || manualPeople.has(person.person_id)));
-    body.innerHTML = `<div class="selection-summary">Select records to use. Related people are checked and locked.</div><label class="checkbox-line selection-master"><input type="checkbox" data-all ${allSelected ? "checked" : ""}><span>Select all / Unselect all</span></label><div class="selection-lists ${includePeople ? "with-people" : ""}"><section class="selection-group"><h4>Applicants</h4>${source.applicants.map(applicant => { const eligible = eligibleApplicants(applicant); const person = source.people.find(row => row.person_id === applicant.person_id) || {}; return `<label class="selection-item ${eligible ? "" : "disabled"}"><input type="checkbox" data-app="${esc(applicant.applicant_id)}" ${selectedApplicants.has(applicant.applicant_id) ? "checked" : ""} ${eligible ? "" : "disabled"}><span>${esc(person.name || "Unnamed applicant")}<small>${esc(person.epic_number || "")}${eligible ? "" : " — Aadhaar number not provided, it's mandatory for online."}</small></span></label>`; }).join("") || `<div class="empty">No applicants.</div>`}</section>${includePeople ? `<section class="selection-group"><h4>People Data</h4>${source.people.map(person => { const lockedItem = locked.has(person.person_id); const checked = lockedItem || manualPeople.has(person.person_id); return `<label class="selection-item ${lockedItem ? "disabled" : ""}"><input type="checkbox" data-person="${esc(person.person_id)}" ${checked ? "checked" : ""} ${lockedItem ? "disabled" : ""}><span>${esc(person.name || "Unnamed person")}<small>${esc(person.epic_number || person.epic_number_2002 || "")}${lockedItem ? " — required by selected applicant" : ""}</small></span></label>`; }).join("") || `<div class="empty">No people.</div>`}</section>` : ""}</div><div class="selection-actions"><button type="button" class="secondary" data-cancel>Cancel</button><button type="button" data-ok>${esc(actionLabel)}</button></div>`;
-
+    body.innerHTML = `<div class="selection-summary">Select records to use. Related people are checked and locked.</div><label class="checkbox-line selection-master"><input type="checkbox" data-all ${allSelected ? "checked" : ""}><span>Select all / Unselect all</span></label><div class="selection-lists ${includePeople ? "with-people" : ""}"><section class="selection-group"><h4>Applicants</h4>${source.applicants.map(applicant => { const status = eligibility(applicant, source, mode); const person = personById(source, applicant.person_id); return `<label class="selection-item ${status.ok ? "" : "disabled"}"><input type="checkbox" data-app="${esc(applicant.applicant_id)}" ${selectedApplicants.has(applicant.applicant_id) ? "checked" : ""} ${status.ok ? "" : "disabled"}><span>${esc(person.name || "Unnamed applicant")}<small>${esc(person.epic_number || "")}${status.ok ? "" : " — " + esc(status.message)}</small></span></label>`; }).join("") || `<div class="empty">No applicants.</div>`}</section>${includePeople ? `<section class="selection-group"><h4>People Data</h4>${source.people.map(person => { const lockedItem = locked.has(person.person_id); const checked = lockedItem || manualPeople.has(person.person_id); return `<label class="selection-item ${lockedItem ? "disabled" : ""}"><input type="checkbox" data-person="${esc(person.person_id)}" ${checked ? "checked" : ""} ${lockedItem ? "disabled" : ""}><span>${esc(person.name || "Unnamed person")}<small>${esc(person.epic_number || person.epic_number_2002 || "")}${lockedItem ? " — required by selected applicant" : ""}</small></span></label>`; }).join("") || `<div class="empty">No people.</div>`}</section>` : ""}</div><div class="selection-actions"><button type="button" class="secondary" data-cancel>Cancel</button><button type="button" data-ok>${esc(actionLabel)}</button></div>`;
     body.querySelector("[data-all]").addEventListener("change", event => {
       selectedApplicants.clear();
       manualPeople.clear();
@@ -103,75 +101,49 @@ function selectionModal({ title, actionLabel, source, includePeople, requireAadh
       }
       render();
     });
-    body.querySelectorAll("[data-app]").forEach(input => {
-      input.addEventListener("change", () => {
-        input.checked ? selectedApplicants.add(input.dataset.app) : selectedApplicants.delete(input.dataset.app);
-        render();
-      });
-    });
-    body.querySelectorAll("[data-person]").forEach(input => {
-      input.addEventListener("change", () => {
-        input.checked ? manualPeople.add(input.dataset.person) : manualPeople.delete(input.dataset.person);
-        render();
-      });
-    });
+    body.querySelectorAll("[data-app]").forEach(input => input.addEventListener("change", () => { input.checked ? selectedApplicants.add(input.dataset.app) : selectedApplicants.delete(input.dataset.app); render(); }));
+    body.querySelectorAll("[data-person]").forEach(input => input.addEventListener("change", () => { input.checked ? manualPeople.add(input.dataset.person) : manualPeople.delete(input.dataset.person); render(); }));
     body.querySelector("[data-cancel]").addEventListener("click", () => closeModal(backdrop));
     body.querySelector("[data-ok]").addEventListener("click", () => {
       const lockedIds = includePeople ? lockedPeople(source, selectedApplicants) : new Set();
       const people = new Set([...manualPeople, ...lockedIds]);
-      if (!selectedApplicants.size && !people.size) {
-        alert("Select at least one record.");
-        return;
-      }
+      if (!selectedApplicants.size && !people.size) return alert("Select at least one record.");
       closeModal(backdrop);
       onConfirm([...selectedApplicants], [...people]);
     });
   }
-
   render();
 }
 
 function exportSelection(state) {
-  selectionModal({
-    title: "Export JSON",
-    actionLabel: "Export JSON",
-    source: state,
-    includePeople: true,
-    onConfirm: (applicantIds, personIds) => {
-      const selected = filteredState(state, applicantIds, personIds);
-      const blob = new Blob([JSON.stringify({ people_database: selected.people, applicant_database: selected.applicants }, null, 2)], { type: "application/json" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${sirFileBaseFromState(selected)}.json`;
-      link.click();
-      URL.revokeObjectURL(link.href);
-    }
-  });
+  selectionModal({ title: "Export JSON", actionLabel: "Export JSON", source: state, includePeople: true, mode: "json", onConfirm: (applicantIds, personIds) => {
+    const selected = filteredState(state, applicantIds, personIds);
+    const blob = new Blob([JSON.stringify({ people_database: selected.people, applicant_database: selected.applicants }, null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${sirFileBaseFromState(selected)}.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  }});
 }
 
 async function importSelection(file, state, commit, renderAll, toast) {
   if (!file) return;
   try {
     const imported = await parseImportFile(file);
-    selectionModal({
-      title: "Import JSON",
-      actionLabel: "Import Selected",
-      source: imported,
-      includePeople: true,
-      onConfirm: (applicantIds, personIds) => {
-        backupState(state);
-        const selected = filteredState(imported, applicantIds, personIds);
-        const people = new Map(state.people.map(person => [person.person_id, person]));
-        selected.people.forEach(person => people.set(person.person_id, person));
-        const applicants = new Map(state.applicants.map(applicant => [applicant.applicant_id, applicant]));
-        selected.applicants.forEach(applicant => applicants.set(applicant.applicant_id, applicant));
-        state.people = [...people.values()];
-        state.applicants = [...applicants.values()];
-        commit();
-        renderAll();
-        toast("Selected data imported.");
-      }
-    });
+    selectionModal({ title: "Import JSON", actionLabel: "Import Selected", source: imported, includePeople: true, mode: "json", onConfirm: (applicantIds, personIds) => {
+      backupState(state);
+      const selected = filteredState(imported, applicantIds, personIds);
+      const people = new Map(state.people.map(person => [person.person_id, person]));
+      selected.people.forEach(person => people.set(person.person_id, person));
+      const applicants = new Map(state.applicants.map(applicant => [applicant.applicant_id, applicant]));
+      selected.applicants.forEach(applicant => applicants.set(applicant.applicant_id, applicant));
+      state.people = [...people.values()];
+      state.applicants = [...applicants.values()];
+      commit();
+      renderAll();
+      toast("Selected data imported.");
+    }});
   } catch (error) {
     alert(error.message || "Import failed.");
   } finally {
@@ -180,18 +152,12 @@ async function importSelection(file, state, commit, renderAll, toast) {
 }
 
 function pdfSelection(offline, state) {
-  selectionModal({
-    title: offline ? "Offline Form PDF" : "Online Form PDF",
-    actionLabel: offline ? "Create Offline PDF" : "Create Online PDF",
-    source: state,
-    includePeople: false,
-    requireAadhaar: !offline,
-    onConfirm: applicantIds => {
-      const selected = filteredState(state, applicantIds, state.people.map(person => person.person_id));
-      selected.applicants = selected.applicants.map(applicant => ({ ...applicant, export_to_pdf: true }));
-      offline ? generateOfflinePdf(selected) : generatePdf(selected);
-    }
-  });
+  const mode = offline ? "offline" : "online";
+  selectionModal({ title: offline ? "Offline Form PDF" : "Online Form PDF", actionLabel: offline ? "Create Offline PDF" : "Create Online PDF", source: state, includePeople: false, mode, onConfirm: applicantIds => {
+    const selected = filteredState(state, applicantIds, state.people.map(person => person.person_id));
+    selected.applicants = selected.applicants.map(applicant => ({ ...applicant, export_to_pdf: true }));
+    offline ? generateOfflinePdf(selected) : generatePdf(selected);
+  }});
 }
 
 export function initFileActions({ state, commit, renderAll, toast }) {
