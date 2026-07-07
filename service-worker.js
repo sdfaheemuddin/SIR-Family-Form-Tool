@@ -1,4 +1,4 @@
-const CACHE_NAME = "sir-family-forms-v26-07-07-7";
+const CACHE_NAME = "sir-family-forms-v26-07-07-8";
 const BASE_URL = new URL("./", self.location);
 const INDEX_URL = new URL("./index.html", self.location).href;
 
@@ -9,6 +9,8 @@ const ASSET_PATHS = [
   "./core.js",
   "./storage.js",
   "./ui.js",
+  "./family-tree.html",
+  "./family-tree.js",
   "./pdf.js",
   "./importExport.js",
   "./app.js",
