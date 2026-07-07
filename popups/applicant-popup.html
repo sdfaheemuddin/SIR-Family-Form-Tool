@@ -23,13 +23,13 @@
     </label>
 
     <label class="stacked">
-      <span class="required">Aadhaar Number</span>
-      <input name="aadhaar_number" type="text" inputmode="numeric" maxlength="14" autocomplete="off" required>
+      <span>Aadhaar Number</span>
+      <input name="aadhaar_number" type="text" inputmode="numeric" maxlength="14" autocomplete="off">
     </label>
 
     <label class="stacked">
       <span class="required">Date of Birth</span>
-      <input name="date_of_birth" type="date" required>
+      <input name="date_of_birth" type="date" max="2009-12-31" required>
     </label>
 
     <label class="stacked">
@@ -48,7 +48,7 @@
     </label>
 
     <div class="stacked photo-field">
-      <span>Applicant Photo (optional)</span>
+      <span>Applicant Photo</span>
       <input name="photo_file" type="file" accept="image/*">
       <img class="photo-preview" alt="Applicant photo preview" data-photo-preview hidden>
       <button type="button" class="small secondary" data-remove-photo hidden>Remove Photo</button>
