@@ -54,6 +54,10 @@ function personEpic(id) {
   return personById(id).epic_number || "";
 }
 
+function hasAadhaar(applicant) {
+  return onlyDigits(applicant?.aadhaar_number || "").length === 12;
+}
+
 function toast(message) {
   const box = $("#toast");
   if (!box) return;
@@ -104,9 +108,13 @@ function photoDownloadBlock(applicant, name) {
   return `<section class="read-section photo-read-section"><h4>Applicant Photo</h4><div class="readonly-photo-box"><img class="readonly-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download Photo</a></div></section>`;
 }
 
+function copyHelpBlock() {
+  return `<div class="copy-help prominent-copy-help">Click any highlighted field to copy</div>`;
+}
+
 function readCell(label, value, copy = true, display = value) {
   const cleanValue = clean(value);
-  return `<div class="copy-table-cell ${copy ? "" : "no-copy"}" ${copy ? `role="button" tabindex="0" data-copy="${esc(cleanValue)}"` : ""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div></div>`;
+  return `<div class="copy-table-cell ${copy ? "copyable-cell" : "no-copy"}" ${copy ? `role="button" tabindex="0" data-copy="${esc(cleanValue)}" title="Click to copy"` : ""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div>${copy ? `<div class="copy-chip">Copy</div>` : ""}</div>`;
 }
 
 async function copyText(value) {
@@ -129,7 +137,7 @@ function renderPeople() {
     wrap.innerHTML = `<div class="empty">No people saved yet.</div>`;
     return;
   }
-  wrap.innerHTML = `<table><thead><tr><th>Name</th><th>EPIC</th><th>2002 Details</th><th>Actions</th></tr></thead><tbody>${stateRef.people.map(person => `<tr><td>${esc(person.name)}</td><td>${esc(person.epic_number)}</td><td>${person.is_2002_available ? `<span class="badge">Yes</span><br>${esc(person.state_2002)}, ${esc(person.district_2002)}<br>AC ${esc(person.ac_no_2002)}${person.ac_name_2002 ? "-" + esc(person.ac_name_2002) : ""}, Part ${esc(person.part_no_2002)}, Sl ${esc(person.sl_no_2002)}` : "No"}</td><td><div class="row-actions"><button class="small secondary" data-edit-person="${esc(person.person_id)}">Edit</button><button class="small danger" data-delete-person="${esc(person.person_id)}">Delete</button></div></td></tr>`).join("")}</tbody></table>`;
+  wrap.innerHTML = `<table><thead><tr><th>Name</th><th>Current EPIC</th><th>2002 Details</th><th>Actions</th></tr></thead><tbody>${stateRef.people.map(person => `<tr><td>${esc(person.name)}</td><td>${esc(person.epic_number)}</td><td>${person.is_2002_available ? `<span class="badge">Yes</span><br>${esc(person.state_2002)}, ${esc(person.district_2002)}<br>AC ${esc(person.ac_no_2002)}${person.ac_name_2002 ? "-" + esc(person.ac_name_2002) : ""}, Part ${esc(person.part_no_2002)}, Sl ${esc(person.sl_no_2002)}` : "No"}</td><td><div class="row-actions"><button class="small secondary" data-edit-person="${esc(person.person_id)}">Edit</button><button class="small danger" data-delete-person="${esc(person.person_id)}">Delete</button></div></td></tr>`).join("")}</tbody></table>`;
   wrap.querySelectorAll("[data-delete-person]").forEach(button => {
     button.addEventListener("click", () => deletePerson(button.dataset.deletePerson));
   });
@@ -197,7 +205,8 @@ function renderReadonlyCard(applicantId) {
   const name = data.applicant_name || "Applicant";
   const phone = onlyDigits(data["Phone Number"]);
   const aadhaar = onlyDigits(data["Aadhaar Number"]);
-  box.innerHTML = `<div class="read-card enhanced-read-card"><h3>${esc(name)}</h3><div class="copy-help">Click on text to copy</div>${photoDownloadBlock(applicant, name)}<section class="read-section"><div class="copy-table-grid two-cols">${readCell("EPIC ID", data["EPIC ID"])}${readCell("Phone Number", phone)}</div></section><section class="read-section"><h4>Mapping Details</h4><div class="copy-table-grid two-cols">${readCell("Type", data["Mapping Type"], false)}${readCell("Relationship", data["Mapping Relation"], false)}</div><div class="copy-table-grid two-cols">${readCell("State", data["Mapping State"], false)}${readCell("District", data["Mapping District"], false)}</div><div class="copy-table-grid three-cols">${readCell("AC No", data["Mapping AC No Display"], false)}${readCell("Part No", data["Mapping Part No"], false)}${readCell("Sl No", data["Mapping Serial No"], false)}</div><div class="copy-table-grid four-cols">${readCell("Mapper Name", data["Mapper Name as per 2002"] || data["Mapping Name"], false)}${readCell("2002 EPIC Number", data["Mapper 2002 EPIC Number"], false)}${readCell("Relative", data["Mapper Relative Name"], false)}${readCell("Relation with Relative", data["Mapper Relationship with Relative"], false)}</div></section><section class="read-section"><h4>Applicant Details</h4><div class="copy-table-grid two-cols">${readCell("Date of Birth", dmy(data["Date of Birth"]))}${readCell("Aadhaar Number", aadhaar, true, formatAadhaar(aadhaar))}</div><h5>Father</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Father’s Name"])}${readCell("EPIC Number", data["Father’s EPIC Number"])}</div><h5>Mother</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Mother’s Name"])}${readCell("EPIC Number", data["Mother’s EPIC Number"])}</div><h5>Spouse</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Spouse’s Name"])}${readCell("EPIC Number", data["Spouse’s EPIC Number"])}</div></section></div>`;
+  const photo = photoDownloadBlock(applicant, name);
+  box.innerHTML = `<div class="read-card enhanced-read-card"><h3>${esc(name)}</h3>${photo}${copyHelpBlock()}<section class="read-section"><div class="copy-table-grid two-cols">${readCell("EPIC ID", data["EPIC ID"])}${readCell("Phone Number", phone)}</div></section><section class="read-section"><h4>Mapping Details</h4><div class="copy-table-grid two-cols">${readCell("Type", data["Mapping Type"], false)}${readCell("Relationship", data["Mapping Relation"], false)}</div><div class="copy-table-grid two-cols">${readCell("State", data["Mapping State"], false)}${readCell("District", data["Mapping District"], false)}</div><div class="copy-table-grid three-cols">${readCell("AC No", data["Mapping AC No Display"], false)}${readCell("Part No", data["Mapping Part No"], false)}${readCell("Sl No", data["Mapping Serial No"], false)}</div><div class="copy-table-grid four-cols">${readCell("Mapper Name", data["Mapper Name as per 2002"] || data["Mapping Name"], false)}${readCell("2002 EPIC Number", data["Mapper 2002 EPIC Number"], false)}${readCell("Relative", data["Mapper Relative Name"], false)}${readCell("Relation with Relative", data["Mapper Relationship with Relative"], false)}</div></section><section class="read-section"><h4>Applicant Details</h4><div class="copy-table-grid two-cols">${readCell("Date of Birth", dmy(data["Date of Birth"]))}${readCell("Aadhaar Number", aadhaar, true, formatAadhaar(aadhaar))}</div><h5>Father</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Father’s Name"])}${readCell("EPIC Number", data["Father’s EPIC Number"])}</div><h5>Mother</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Mother’s Name"])}${readCell("EPIC Number", data["Mother’s EPIC Number"])}</div><h5>Spouse</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Spouse’s Name"])}${readCell("EPIC Number", data["Spouse’s EPIC Number"])}</div></section></div>`;
   box.querySelectorAll("[data-copy]").forEach(node => {
     node.addEventListener("click", () => copyText(node.dataset.copy));
     node.addEventListener("keydown", event => {
@@ -277,22 +286,24 @@ function filteredState(source, applicantIds, personIds = []) {
   };
 }
 
-function selectionModal({ title, actionLabel, source, includePeople, onConfirm }) {
-  const selectedApplicants = new Set(source.applicants.map(applicant => applicant.applicant_id));
+function selectionModal({ title, actionLabel, source, includePeople, requireAadhaar = false, onConfirm }) {
+  const eligibleApplicants = applicant => !requireAadhaar || hasAadhaar(applicant);
+  const selectedApplicants = new Set(source.applicants.filter(eligibleApplicants).map(applicant => applicant.applicant_id));
   const manualPeople = new Set(includePeople ? source.people.map(person => person.person_id) : []);
   const body = el("div", { class: "selection-modal-content" });
   const backdrop = openModal(title, body);
 
   function render() {
     const locked = includePeople ? lockedPeople(source, selectedApplicants) : new Set();
-    const allSelected = source.applicants.every(applicant => selectedApplicants.has(applicant.applicant_id)) && (!includePeople || source.people.every(person => locked.has(person.person_id) || manualPeople.has(person.person_id)));
-    body.innerHTML = `<div class="selection-summary">Select records to use. Related people are checked and locked.</div><label class="checkbox-line selection-master"><input type="checkbox" data-all ${allSelected ? "checked" : ""}><span>Select all / Unselect all</span></label><div class="selection-lists ${includePeople ? "with-people" : ""}"><section class="selection-group"><h4>Applicants</h4>${source.applicants.map(applicant => `<label class="selection-item"><input type="checkbox" data-app="${esc(applicant.applicant_id)}" ${selectedApplicants.has(applicant.applicant_id) ? "checked" : ""}><span>${esc((source.people.find(person => person.person_id === applicant.person_id) || {}).name || "Unnamed applicant")}<small>${esc((source.people.find(person => person.person_id === applicant.person_id) || {}).epic_number || "")}</small></span></label>`).join("") || `<div class="empty">No applicants.</div>`}</section>${includePeople ? `<section class="selection-group"><h4>People Data</h4>${source.people.map(person => { const lockedItem = locked.has(person.person_id); const checked = lockedItem || manualPeople.has(person.person_id); return `<label class="selection-item ${lockedItem ? "disabled" : ""}"><input type="checkbox" data-person="${esc(person.person_id)}" ${checked ? "checked" : ""} ${lockedItem ? "disabled" : ""}><span>${esc(person.name || "Unnamed person")}<small>${esc(person.epic_number || person.epic_number_2002 || "")}${lockedItem ? " — required by selected applicant" : ""}</small></span></label>`; }).join("") || `<div class="empty">No people.</div>`}</section>` : ""}</div><div class="selection-actions"><button type="button" class="secondary" data-cancel>Cancel</button><button type="button" data-ok>${esc(actionLabel)}</button></div>`;
+    const selectableApplicants = source.applicants.filter(eligibleApplicants);
+    const allSelected = selectableApplicants.length > 0 && selectableApplicants.every(applicant => selectedApplicants.has(applicant.applicant_id)) && (!includePeople || source.people.every(person => locked.has(person.person_id) || manualPeople.has(person.person_id)));
+    body.innerHTML = `<div class="selection-summary">Select records to use. Related people are checked and locked.</div><label class="checkbox-line selection-master"><input type="checkbox" data-all ${allSelected ? "checked" : ""}><span>Select all / Unselect all</span></label><div class="selection-lists ${includePeople ? "with-people" : ""}"><section class="selection-group"><h4>Applicants</h4>${source.applicants.map(applicant => { const eligible = eligibleApplicants(applicant); const person = source.people.find(row => row.person_id === applicant.person_id) || {}; return `<label class="selection-item ${eligible ? "" : "disabled"}"><input type="checkbox" data-app="${esc(applicant.applicant_id)}" ${selectedApplicants.has(applicant.applicant_id) ? "checked" : ""} ${eligible ? "" : "disabled"}><span>${esc(person.name || "Unnamed applicant")}<small>${esc(person.epic_number || "")}${eligible ? "" : " — Aadhaar number not provided, it's mandatory for online."}</small></span></label>`; }).join("") || `<div class="empty">No applicants.</div>`}</section>${includePeople ? `<section class="selection-group"><h4>People Data</h4>${source.people.map(person => { const lockedItem = locked.has(person.person_id); const checked = lockedItem || manualPeople.has(person.person_id); return `<label class="selection-item ${lockedItem ? "disabled" : ""}"><input type="checkbox" data-person="${esc(person.person_id)}" ${checked ? "checked" : ""} ${lockedItem ? "disabled" : ""}><span>${esc(person.name || "Unnamed person")}<small>${esc(person.epic_number || person.epic_number_2002 || "")}${lockedItem ? " — required by selected applicant" : ""}</small></span></label>`; }).join("") || `<div class="empty">No people.</div>`}</section>` : ""}</div><div class="selection-actions"><button type="button" class="secondary" data-cancel>Cancel</button><button type="button" data-ok>${esc(actionLabel)}</button></div>`;
 
     body.querySelector("[data-all]").addEventListener("change", event => {
       selectedApplicants.clear();
       manualPeople.clear();
       if (event.target.checked) {
-        source.applicants.forEach(applicant => selectedApplicants.add(applicant.applicant_id));
+        selectableApplicants.forEach(applicant => selectedApplicants.add(applicant.applicant_id));
         if (includePeople) source.people.forEach(person => manualPeople.add(person.person_id));
       }
       render();
@@ -379,6 +390,7 @@ function pdfSelection(offline) {
     actionLabel: offline ? "Create Offline PDF" : "Create Online PDF",
     source: stateRef,
     includePeople: false,
+    requireAadhaar: !offline,
     onConfirm: applicantIds => {
       const selected = filteredState(stateRef, applicantIds, stateRef.people.map(person => person.person_id));
       selected.applicants = selected.applicants.map(applicant => ({ ...applicant, export_to_pdf: true }));
@@ -421,7 +433,7 @@ function initZoom() {
 }
 
 function addVersion() {
-  if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-06" }));
+  if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-06 UI polish" }));
 }
 
 export function initUI(state, commit) {
