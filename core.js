@@ -113,16 +113,19 @@ export function hasEpic(person) {
   return Boolean(person && person.epic_number);
 }
 
+function normKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function same2002Serial(a, b) {
   const pa = normalizePerson(a);
   const pb = normalizePerson(b);
   return Boolean(
-    pa.is_2002_available && pb.is_2002_available &&
-    pa.state_2002 && pb.state_2002 && pa.state_2002.toLowerCase() === pb.state_2002.toLowerCase() &&
-    pa.district_2002 && pb.district_2002 && pa.district_2002.toLowerCase() === pb.district_2002.toLowerCase() &&
-    pa.ac_no_2002 && pb.ac_no_2002 && pa.ac_no_2002 === pb.ac_no_2002 &&
-    pa.part_no_2002 && pb.part_no_2002 && pa.part_no_2002 === pb.part_no_2002 &&
-    pa.sl_no_2002 && pb.sl_no_2002 && pa.sl_no_2002 === pb.sl_no_2002
+    pa.state_2002 && pb.state_2002 && normKey(pa.state_2002) === normKey(pb.state_2002) &&
+    pa.district_2002 && pb.district_2002 && normKey(pa.district_2002) === normKey(pb.district_2002) &&
+    pa.ac_no_2002 && pb.ac_no_2002 && normKey(pa.ac_no_2002) === normKey(pb.ac_no_2002) &&
+    pa.part_no_2002 && pb.part_no_2002 && normKey(pa.part_no_2002) === normKey(pb.part_no_2002) &&
+    pa.sl_no_2002 && pb.sl_no_2002 && normKey(pa.sl_no_2002) === normKey(pb.sl_no_2002)
   );
 }
 
@@ -146,7 +149,7 @@ export function validatePerson(person, options = {}) {
   if (p.epic_number && people.some(x => x.person_id !== editingId && x.epic_number && x.epic_number === p.epic_number)) {
     errors.push("Current EPIC Number must be unique.");
   }
-  if (p.is_2002_available && p.sl_no_2002 && people.some(x => x.person_id !== editingId && same2002Serial(p, x))) {
+  if (p.sl_no_2002 && people.some(x => x.person_id !== editingId && same2002Serial(p, x))) {
     errors.push("2002 Sl No must be unique for the same State, District, AC No and Part No.");
   }
   return errors;
