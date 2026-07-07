@@ -4,11 +4,12 @@ let stateRef;
 let commitRef;
 let templateText = "";
 
+const VERSION = "26-07-06-ui-polish";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/person-popup.html?v=26-07-06-add-new-state");
+  const response = await fetch(`./popups/person-popup.html?v=${VERSION}`);
   if (!response.ok) throw new Error("Could not load People popup template.");
   templateText = await response.text();
   return templateText;
@@ -67,6 +68,10 @@ function sync2002(form) {
   });
 }
 
+function hasEpicValidationError(errors) {
+  return errors.some(error => /EPIC/i.test(error) && !/2002/i.test(error));
+}
+
 export async function openPersonPopup(options = {}) {
   const personId = typeof options === "string" ? options : (options.personId || "");
   const activeState = options.state || stateRef;
@@ -82,8 +87,10 @@ export async function openPersonPopup(options = {}) {
   modal.querySelector("[data-body]").innerHTML = await getTemplate();
   const form = modal.querySelector("form");
   const errorBox = form.querySelector("[data-error]");
+  const overrideRule = form.querySelector("[data-override-rule]");
 
   Object.entries(draft).forEach(([key, value]) => setField(form, key, value));
+  if (draft.allow_nonstandard_epic) overrideRule.hidden = false;
   if (fromApplicant) form.querySelector("[data-epic-label]").classList.add("required");
   if (fromMapper) {
     form.elements.is_2002_available.checked = true;
@@ -104,6 +111,9 @@ export async function openPersonPopup(options = {}) {
     event.preventDefault();
     const person = readPerson(form, draft);
     const errors = validatePerson(person, { requireEpic: fromApplicant });
+    if (hasEpicValidationError(errors) && !person.allow_nonstandard_epic) {
+      overrideRule.hidden = false;
+    }
     errorBox.style.display = errors.length ? "block" : "none";
     errorBox.textContent = errors.join("\n");
     if (errors.length) return;
