@@ -49,6 +49,7 @@ th{background:#f6fbf8;color:var(--muted);font-size:.86rem}
 .read-section{border-top:1px solid var(--line);padding-top:.8rem;margin-top:.8rem}
 .read-section h4,.read-section h5{margin:.35rem 0;color:var(--green)}
 .copy-table-grid{display:grid;border:1px solid var(--line);border-bottom:0;border-right:0;margin:.45rem 0}
+.copy-table-grid.one-col{grid-template-columns:1fr}
 .copy-table-grid.two-cols{grid-template-columns:repeat(2,minmax(0,1fr))}
 .copy-table-grid.three-cols{grid-template-columns:repeat(3,minmax(0,1fr))}
 .copy-table-grid.four-cols{grid-template-columns:repeat(4,minmax(0,1fr))}
