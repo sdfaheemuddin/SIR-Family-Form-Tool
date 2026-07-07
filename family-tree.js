@@ -1,14 +1,14 @@
-const VERSION = "26-07-07-12";
+const VERSION = "26-07-07-13";
 let stateRef;
 let templateText = "";
 
 const $ = selector => document.querySelector(selector);
 const esc = value => String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
-const NODE_W = 220;
-const NODE_H = 94;
-const GAP_X = 44;
-const GAP_Y = 86;
-const PAD = 32;
+const NODE_W = 240;
+const NODE_H = 96;
+const GAP_X = 72;
+const GAP_Y = 96;
+const PAD = 36;
 const MALE_COLOR = "#2563eb";
 const FEMALE_COLOR = "#db2777";
 
@@ -184,13 +184,13 @@ function displayName(person) { return person.epic_number ? `${person.name || "Un
 function userIcon(kind) {
   if (!kind) return "";
   const color = kind === "male" ? MALE_COLOR : FEMALE_COLOR;
-  return `<svg class="ft-user-icon" viewBox="0 0 24 24" aria-hidden="true" style="color:${color}"><path fill="currentColor" d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5Zm0 2c-4.42 0-8 2.24-8 5v1.25c0 .41.34.75.75.75h14.5c.41 0 .75-.34.75-.75V19c0-2.76-3.58-5-8-5Z"/></svg>`;
+  return `<svg class="ft-user-icon" viewBox="0 0 24 24" aria-hidden="true" style="color:${color};width:1em;height:1em;min-width:1em;flex:0 0 1em;display:inline-block;vertical-align:-0.12em"><path fill="currentColor" d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5Zm0 2c-4.42 0-8 2.24-8 5v1.25c0 .41.34.75.75.75h14.5c.41 0 .75-.34.75-.75V19c0-2.76-3.58-5-8-5Z"/></svg>`;
 }
 
 function nodeHtml(item, genderMap) {
   const p = item.person;
   const lines = [];
-  const title = `<div class="ft-node-title">${userIcon(genderMap.get(p.person_id))}<span>${esc(displayName(p))}</span></div>`;
+  const title = `<div class="ft-node-title" style="display:flex;align-items:center;gap:.28rem;line-height:1.18;font-size:.92rem;color:#195b45;font-weight:900;min-width:0">${userIcon(genderMap.get(p.person_id))}<span style="min-width:0;overflow-wrap:anywhere">${esc(displayName(p))}</span></div>`;
   if (p.state_2002 || p.district_2002) lines.push([p.state_2002, p.district_2002].filter(Boolean).join(", "));
   if (p.ac_no_2002 || p.part_no_2002 || p.sl_no_2002) {
     const parts = [];
@@ -199,7 +199,7 @@ function nodeHtml(item, genderMap) {
     if (p.sl_no_2002) parts.push(`Serial: ${p.sl_no_2002}`);
     lines.push(parts.join(", "));
   }
-  return `<div class="ft-node" style="left:${item.x}px;top:${item.y}px">${title}${lines.map(row => `<div>${esc(row)}</div>`).join("")}</div>`;
+  return `<div class="ft-node" style="left:${item.x}px;top:${item.y}px;width:${NODE_W}px;min-height:${NODE_H}px">${title}${lines.map(row => `<div>${esc(row)}</div>`).join("")}</div>`;
 }
 
 function parentGroups(edges) {
@@ -224,8 +224,8 @@ function parentConnectorSvg(group, pos) {
   const parentY = Math.max(...parents.map(p => p.y + NODE_H));
   const childTopY = Math.min(...children.map(c => c.y));
   const jointX = (Math.min(...pxs) + Math.max(...pxs)) / 2;
-  const parentLineY = parentY + 12;
-  const busY = childTopY - 24;
+  const parentLineY = parentY + 14;
+  const busY = childTopY - 28;
   let svg = "";
   if (parents.length > 1) svg += `<line x1="${Math.min(...pxs)}" y1="${parentLineY}" x2="${Math.max(...pxs)}" y2="${parentLineY}" class="ft-line"/>`;
   svg += `<line x1="${jointX}" y1="${parents.length > 1 ? parentLineY : parentY}" x2="${jointX}" y2="${busY}" class="ft-line"/>`;
@@ -270,7 +270,7 @@ function render() {
 }
 
 function familyTreeFileName(ext) { return `SIR_Family_Tree_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "")}.${ext}`; }
-function exportStyles() { return `body{margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#17221d}.export-wrap{padding:20px;background:#fff}.ft-scroll{display:grid;gap:1rem;overflow:visible}.ft-component{border:1.5px solid #c8d8d0;border-radius:12px;background:#fbfdfc;padding:.65rem;overflow:visible;margin-bottom:16px}.ft-title{color:#195b45;font-weight:900;margin-bottom:.45rem}.ft-canvas{position:relative;background:#fff;border:1.5px solid #c8d8d0;border-radius:12px;overflow:hidden}.ft-svg{position:absolute;inset:0;z-index:1}.ft-line{stroke:#195b45;stroke-width:2;fill:none}.ft-label{font-size:12px;font-weight:900;fill:#195b45;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}.ft-node{position:absolute;width:220px;min-height:94px;z-index:2;border:1.5px solid #195b45;border-radius:12px;background:#f6fbf8;color:#17221d;padding:.52rem .6rem;box-shadow:0 1px 5px rgba(0,0,0,.08);font-size:.82rem;font-weight:800;display:grid;align-content:center;gap:.16rem;overflow-wrap:anywhere}.ft-node-title{display:flex;align-items:center;gap:.32rem;font-size:.92rem;color:#195b45;font-weight:900}.ft-user-icon{width:1.05em;height:1.05em;flex:0 0 auto}`; }
+function exportStyles() { return `body{margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#17221d}.export-wrap{padding:20px;background:#fff}.ft-scroll{display:grid;gap:1rem;overflow:visible}.ft-component{border:1.5px solid #c8d8d0;border-radius:12px;background:#fbfdfc;padding:.65rem;overflow:visible;margin-bottom:16px}.ft-title{color:#195b45;font-weight:900;margin-bottom:.45rem}.ft-canvas{position:relative;background:#fff;border:1.5px solid #c8d8d0;border-radius:12px;overflow:hidden}.ft-svg{position:absolute;inset:0;z-index:1}.ft-line{stroke:#195b45;stroke-width:2;fill:none}.ft-label{font-size:12px;font-weight:900;fill:#195b45;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}.ft-node{position:absolute;width:${NODE_W}px;min-height:${NODE_H}px;z-index:2;border:1.5px solid #195b45;border-radius:12px;background:#f6fbf8;color:#17221d;padding:.52rem .6rem;box-shadow:0 1px 5px rgba(0,0,0,.08);font-size:.82rem;font-weight:800;display:grid;align-content:center;gap:.16rem;overflow-wrap:anywhere}.ft-node-title{display:flex;align-items:center;gap:.28rem;line-height:1.18;font-size:.92rem;color:#195b45;font-weight:900;min-width:0}.ft-node-title span{min-width:0;overflow-wrap:anywhere}.ft-user-icon{width:1em;height:1em;min-width:1em;flex:0 0 1em;display:inline-block;vertical-align:-0.12em}`; }
 function exportHtml() {
   const source = $("#familyTreeWrap");
   if (!source || !source.textContent.trim()) throw new Error("No family tree available to export.");
