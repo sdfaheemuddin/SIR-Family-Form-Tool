@@ -1,7 +1,7 @@
 import { backupState } from "../../storage.js";
 import { parseImportFile, sirFileBaseFromState } from "../../importExport.js";
 import { generatePdf, generateOfflinePdf } from "../../pdf.js";
-import { has2002Details, onlyDigits } from "../../core.js";
+import { onlyDigits } from "../../core.js";
 
 let modalDepth = 0;
 const $ = selector => document.querySelector(selector);
@@ -70,13 +70,29 @@ function hasAadhaar(applicant) {
   return onlyDigits(applicant?.aadhaar_number || "").length === 12;
 }
 
+function full2002Ready(person) {
+  return Boolean(
+    person &&
+    person.is_2002_available &&
+    person.state_2002 &&
+    person.district_2002 &&
+    person.ac_name_2002 &&
+    person.name_as_per_2002 &&
+    person.relative_name_2002 &&
+    person.relative_relationship_2002 &&
+    person.ac_no_2002 &&
+    person.part_no_2002 &&
+    person.sl_no_2002
+  );
+}
+
 function offlineReady(source, applicant) {
-  return has2002Details(personById(source, applicant.mapper_person_id));
+  return full2002Ready(personById(source, applicant.mapper_person_id));
 }
 
 function eligibility(applicant, source, mode) {
   if (mode === "online" && !hasAadhaar(applicant)) return { ok: false, message: "Aadhaar number not provided, it's mandatory for online." };
-  if (mode === "offline" && !offlineReady(source, applicant)) return { ok: false, message: "Complete 2002 details not provided, it's mandatory for offline." };
+  if (mode === "offline" && !offlineReady(source, applicant)) return { ok: false, message: "All 2002 details not provided, it's mandatory for offline." };
   return { ok: true, message: "" };
 }
 
