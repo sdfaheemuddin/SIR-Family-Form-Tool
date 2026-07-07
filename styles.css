@@ -50,7 +50,7 @@ th{background:#f6fbf8;color:var(--muted);font-size:.8rem}
 .readonly-person-edit-btn{margin-top:-.08rem}
 .read-card-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:.6rem;min-height:0}
 .applicant-top-photo{display:grid;gap:.18rem;justify-items:center;margin-top:-.15rem;flex:0 0 auto}
-.small-top-photo{width:56px!important;height:72px!important;max-width:56px!important;max-height:72px!important;border-radius:7px}
+.small-top-photo{width:84px!important;height:108px!important;max-width:84px!important;max-height:108px!important;border-radius:8px}
 .photo-download-link{font-size:.64rem;padding:.12rem .32rem;min-height:0;border-radius:6px}
 .copy-help{margin:.4rem 0 .45rem;color:var(--muted);font-size:.82rem;font-weight:800}
 .prominent-copy-help{background:#fff8df;border:1.5px solid #f0d58a;color:#5d4300;border-radius:9px;padding:.45rem .55rem;font-size:.86rem;box-shadow:0 1px 6px rgba(0,0,0,.035)}
