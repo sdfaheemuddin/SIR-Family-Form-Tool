@@ -78,7 +78,6 @@ export async function openPersonPopup(options = {}) {
   const activeCommit = options.commit || commitRef;
   if (!activeState || !activeCommit) throw new Error("People popup is not initialized.");
 
-  const fromApplicant = Boolean(options.fromApplicant);
   const fromMapper = Boolean(options.fromMapper);
   const onSaved = typeof options.onSaved === "function" ? options.onSaved : null;
   const existing = activeState.people.find(p => p.person_id === personId);
@@ -91,7 +90,6 @@ export async function openPersonPopup(options = {}) {
 
   Object.entries(draft).forEach(([key, value]) => setField(form, key, value));
   if (draft.allow_nonstandard_epic) overrideRule.hidden = false;
-  if (fromApplicant) form.querySelector("[data-epic-label]").classList.add("required");
   if (fromMapper) {
     form.elements.is_2002_available.checked = true;
     form.elements.is_2002_available.disabled = true;
@@ -110,7 +108,7 @@ export async function openPersonPopup(options = {}) {
   form.addEventListener("submit", event => {
     event.preventDefault();
     const person = readPerson(form, draft);
-    const errors = validatePerson(person, { requireEpic: fromApplicant });
+    const errors = validatePerson(person, { requireEpic: false });
     if (hasEpicValidationError(errors) && !person.allow_nonstandard_epic) {
       overrideRule.hidden = false;
     }
