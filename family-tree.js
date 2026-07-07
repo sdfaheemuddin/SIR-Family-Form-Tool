@@ -1,4 +1,4 @@
-const VERSION = "26-07-07-10";
+const VERSION = "26-07-07-11";
 let stateRef;
 let templateText = "";
 
@@ -203,6 +203,7 @@ function renderComponent(comp, index) {
 function render() {
   const wrap = $("#familyTreeWrap");
   if (!wrap) return;
+  ensureExportButtons();
   const graph = buildGraph();
   if (!graph.nodes.length) {
     wrap.innerHTML = `<div class="empty">No connected family data available to show.</div>`;
@@ -266,7 +267,25 @@ function exportPdf() {
   }
 }
 
+function ensureExportButtons() {
+  const section = $("#familyTreeSection") || $("#familyTreeTab");
+  if (!section || $("#exportFamilyTreeImageBtn")) return;
+  const actions = document.createElement("div");
+  actions.className = "tree-export-actions";
+  actions.innerHTML = `<button id="exportFamilyTreeImageBtn" type="button" class="secondary">Export Image</button><button id="exportFamilyTreePdfBtn" type="button" class="secondary">Export PDF</button>`;
+  actions.style.display = "flex";
+  actions.style.gap = ".4rem";
+  actions.style.flexWrap = "wrap";
+  actions.style.margin = ".35rem 0 .6rem";
+  const note = section.querySelector(".tree-note");
+  const head = section.querySelector(".section-head");
+  if (note) note.insertAdjacentElement("afterend", actions);
+  else if (head) head.insertAdjacentElement("afterend", actions);
+  else section.prepend(actions);
+}
+
 function bindExportButtons() {
+  ensureExportButtons();
   $("#exportFamilyTreeImageBtn")?.addEventListener("click", exportImage);
   $("#exportFamilyTreePdfBtn")?.addEventListener("click", exportPdf);
 }
