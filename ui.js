@@ -2,7 +2,7 @@
 import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 import { backupState, clearState } from "./storage.js";
 import { downloadJson } from "./importExport.js";
-import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-07";
+import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-07-2";
 
 let stateRef;
 let commitRef;
@@ -84,13 +84,7 @@ function renderReadonlyPicker() {
   syncReadonlyButtons();
 }
 
-function syncReadonlyButtons() {
-  const hasSelection = Boolean($("#readonlyApplicantSelect")?.value);
-  $("#markCompleteBtn").disabled = !hasSelection;
-  $("#nextApplicantBtn").disabled = pendingApplicants().length < 2;
-  const edit = $("#readonlyEditApplicantBtn");
-  if (edit) edit.disabled = !hasSelection;
-}
+function syncReadonlyButtons() { const hasSelection = Boolean($("#readonlyApplicantSelect")?.value); $("#markCompleteBtn").disabled = !hasSelection; $("#nextApplicantBtn").disabled = pendingApplicants().length < 2; const edit = $("#readonlyEditApplicantBtn"); if (edit) edit.disabled = !hasSelection; }
 
 function renderReadonlyCard(applicantId) {
   const box = $("#readonlyCard");
@@ -111,9 +105,7 @@ function deleteApplicant(applicantId) { const applicant = stateRef.applicants.fi
 function selectNext(currentId = "") { const rows = pendingApplicants(); const select = $("#readonlyApplicantSelect"); if (!rows.length) { select.dataset.selected = ""; renderReadonlyPicker(); toast("All applicants completed."); return; } const index = rows.findIndex(applicant => applicant.applicant_id === currentId); select.dataset.selected = rows[index >= 0 ? (index + 1) % rows.length : 0].applicant_id; renderReadonlyPicker(); }
 function markComplete() { const id = $("#readonlyApplicantSelect").value; const applicant = stateRef.applicants.find(row => row.applicant_id === id); if (!applicant) return; applicant.status_completed = true; commitRef(); renderDatabaseTables(); selectNext(id); }
 function clearAll() { if (confirm("Before clearing, export a JSON backup now? Press OK to export, Cancel to continue without exporting.")) downloadJson(stateRef); if (!confirm("Clear all people and applicants from this device? This cannot be undone unless you have a JSON backup.")) return; backupState(stateRef); stateRef.people = []; stateRef.applicants = []; clearState(); refreshScreen(); toast("All data cleared. A local backup was stored."); }
-
 function initTabs() { $$('[data-tab-target]').forEach(button => button.addEventListener("click", () => { $$(".tab-btn").forEach(tab => tab.classList.toggle("active", tab === button)); $$(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === button.dataset.tabTarget)); if (button.dataset.tabTarget === "databaseTab") renderDatabaseTables(); })); }
 function initZoom() { const key = "sir_family_forms_zoom"; const apply = value => { const zoom = Math.min(1.3, Math.max(0.8, Number(value) || 1)); document.documentElement.style.setProperty("--app-zoom", zoom); localStorage.setItem(key, zoom); }; apply(localStorage.getItem(key) || 1); $("#zoomOutBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) - 0.1).toFixed(2))); $("#zoomResetBtn")?.addEventListener("click", () => apply(1)); $("#zoomInBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) + 0.1).toFixed(2))); }
 function addVersion() { if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-07" })); }
-
 export function initUI(state, commit) { stateRef = state; commitRef = commit; initTabs(); initZoom(); addVersion(); initFileActions({ state: stateRef, commit: commitRef, renderAll: refreshScreen, toast }); $("#clearDataBtn").addEventListener("click", clearAll); $("#readonlyApplicantSelect").addEventListener("change", event => { event.target.dataset.selected = event.target.value; renderReadonlyCard(event.target.value); syncReadonlyButtons(); }); $("#markCompleteBtn").addEventListener("click", markComplete); $("#nextApplicantBtn").addEventListener("click", () => selectNext($("#readonlyApplicantSelect").value)); document.addEventListener("sir:data-changed", refreshScreen); refreshScreen(); }
