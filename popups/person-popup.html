@@ -8,12 +8,13 @@
     </label>
 
     <label class="stacked">
-      <span data-epic-label>EPIC Number</span>
+      <span data-epic-label>Current EPIC Number</span>
+      <small class="field-note">Leave blank if not available.</small>
       <div class="inline-input-row">
         <input name="epic_number" type="text" autocomplete="off">
-        <label class="checkbox-line override-inline">
+        <label class="checkbox-line override-inline" data-override-rule hidden>
           <input name="allow_nonstandard_epic" type="checkbox">
-          <span>Override</span>
+          <span>Override rule</span>
         </label>
       </div>
     </label>
@@ -26,6 +27,7 @@
 
   <fieldset class="details-2002" data-details-2002 hidden>
     <legend>2002 Details</legend>
+    <div class="section-note">All details should be filled as per 2002 list.</div>
 
     <label class="stacked">
       <span class="required">State</span>
@@ -69,7 +71,11 @@
 
     <label class="stacked">
       <span>Relationship with relative</span>
-      <input name="relative_relationship_2002" type="text" autocomplete="off">
+      <input name="relative_relationship_2002" type="text" autocomplete="off" list="relativeRelationshipOptions">
+      <datalist id="relativeRelationshipOptions">
+        <option value="Father"></option>
+        <option value="Mother"></option>
+      </datalist>
     </label>
 
     <label class="stacked">
