@@ -1,4 +1,4 @@
-const VERSION = "26-07-07-9";
+const VERSION = "26-07-07-10";
 let stateRef;
 let templateText = "";
 
@@ -211,11 +211,72 @@ function render() {
   wrap.innerHTML = `<div class="ft-scroll">${components(graph).map(renderComponent).join("")}</div>`;
 }
 
+function familyTreeFileName(ext) {
+  const stamp = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, "");
+  return `SIR_Family_Tree_${stamp}.${ext}`;
+}
+
+function exportHtml() {
+  const source = $("#familyTreeWrap");
+  if (!source || !source.textContent.trim()) throw new Error("No family tree available to export.");
+  const width = Math.max(900, source.scrollWidth + 40);
+  const height = Math.max(700, source.scrollHeight + 40);
+  const styles = `body{margin:0;background:#fff;font-family:Arial,Helvetica,sans-serif;color:#17221d}.export-wrap{padding:20px;background:#fff}.ft-scroll{display:grid;gap:1rem;overflow:visible}.ft-component{border:1.5px solid #c8d8d0;border-radius:12px;background:#fbfdfc;padding:.65rem;overflow:visible;margin-bottom:16px}.ft-title{color:#195b45;font-weight:900;margin-bottom:.45rem}.ft-canvas{position:relative;background:#fff;border:1.5px solid #c8d8d0;border-radius:12px;overflow:hidden}.ft-svg{position:absolute;inset:0;z-index:1}.ft-line{stroke:#195b45;stroke-width:2;fill:none}.ft-label{font-size:12px;font-weight:900;fill:#195b45;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}.ft-node{position:absolute;width:210px;min-height:92px;z-index:2;border:1.5px solid #195b45;border-radius:12px;background:#f6fbf8;color:#17221d;padding:.52rem .6rem;box-shadow:0 1px 5px rgba(0,0,0,.08);font-size:.82rem;font-weight:800;display:grid;align-content:center;gap:.16rem;overflow-wrap:anywhere}.ft-node div:first-child{font-size:.92rem;color:#195b45;font-weight:900}`;
+  const html = `<div xmlns="http://www.w3.org/1999/xhtml"><style>${styles}</style><div class="export-wrap">${source.innerHTML}</div></div>`;
+  return { html, width, height };
+}
+
+function exportImage() {
+  try {
+    const { html, width, height } = exportHtml();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(image, 0, 0);
+      URL.revokeObjectURL(url);
+      const link = document.createElement("a");
+      link.download = familyTreeFileName("png");
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    };
+    image.onerror = () => { URL.revokeObjectURL(url); alert("Could not export image on this browser. Try Export PDF."); };
+    image.src = url;
+  } catch (error) {
+    alert(error.message || "Could not export family tree image.");
+  }
+}
+
+function exportPdf() {
+  try {
+    const source = $("#familyTreeWrap");
+    if (!source || !source.textContent.trim()) throw new Error("No family tree available to export.");
+    const win = window.open("", "_blank");
+    if (!win) throw new Error("Popup blocked. Allow popups and try again.");
+    win.document.write(`<!doctype html><html><head><title>SIR Family Tree</title><style>@page{size:A4 landscape;margin:10mm}body{font-family:Arial,Helvetica,sans-serif;margin:0;color:#17221d}.print-toolbar{position:sticky;top:0;background:#fff;padding:8px;border-bottom:1px solid #c8d8d0;z-index:10}.print-toolbar button{background:#195b45;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-weight:800}.print-content{padding:10mm}.ft-scroll{display:grid;gap:14px;overflow:visible}.ft-component{break-inside:avoid;border:1.5px solid #c8d8d0;border-radius:12px;background:#fbfdfc;padding:10px;margin-bottom:12px;overflow:visible}.ft-title{color:#195b45;font-weight:900;margin-bottom:8px}.ft-canvas{position:relative;background:#fff;border:1.5px solid #c8d8d0;border-radius:12px;overflow:hidden}.ft-svg{position:absolute;inset:0;z-index:1}.ft-line{stroke:#195b45;stroke-width:2;fill:none}.ft-label{font-size:12px;font-weight:900;fill:#195b45;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round}.ft-node{position:absolute;width:210px;min-height:92px;z-index:2;border:1.5px solid #195b45;border-radius:12px;background:#f6fbf8;color:#17221d;padding:8px 10px;box-shadow:0 1px 5px rgba(0,0,0,.08);font-size:13px;font-weight:800;display:grid;align-content:center;gap:2px;overflow-wrap:anywhere}.ft-node div:first-child{font-size:14px;color:#195b45;font-weight:900}@media print{.print-toolbar{display:none}}</style></head><body><div class="print-toolbar"><button onclick="window.print()">Print / Save PDF</button></div><div class="print-content"><h2>SIR Family Tree</h2>${source.innerHTML}</div></body></html>`);
+    win.document.close();
+  } catch (error) {
+    alert(error.message || "Could not export family tree PDF.");
+  }
+}
+
+function bindExportButtons() {
+  $("#exportFamilyTreeImageBtn")?.addEventListener("click", exportImage);
+  $("#exportFamilyTreePdfBtn")?.addEventListener("click", exportPdf);
+}
+
 export async function initFamilyTree(state) {
   stateRef = state;
   const panel = $("#familyTreeTab");
   if (!panel) return;
   panel.innerHTML = await getTemplate();
+  bindExportButtons();
   render();
 }
 
