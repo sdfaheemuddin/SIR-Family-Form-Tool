@@ -23,18 +23,18 @@ function personTitle(person) {
 
 function personSub(person) {
   const rows = [];
-  if (person?.epic_number) rows.push(`EPIC ${person.epic_number}`);
+  if (person?.epic_number) rows.push(`Current EPIC: ${person.epic_number}`);
   if (person?.name_as_per_2002) rows.push(`2002: ${person.name_as_per_2002}`);
-  if (person?.ac_no_2002 || person?.part_no_2002 || person?.sl_no_2002) rows.push(`AC ${person.ac_no_2002 || "-"} · Part ${person.part_no_2002 || "-"} · Sl ${person.sl_no_2002 || "-"}`);
+  if (person?.ac_no_2002 || person?.part_no_2002 || person?.sl_no_2002) rows.push(`AC ${person.ac_no_2002 || "-"}, Part ${person.part_no_2002 || "-"}, Sl ${person.sl_no_2002 || "-"}`);
   return rows;
 }
 
-function nodeCard(person, role, extra = "") {
-  if (!person?.person_id) return `<div class="diagram-node missing"><div class="node-role">${esc(role)}</div><div class="node-name">Not selected</div></div>`;
-  return `<div class="diagram-node"><div class="node-role">${esc(role)}</div><div class="node-name">${esc(personTitle(person))}</div>${extra ? `<div class="node-chip">${esc(extra)}</div>` : ""}${personSub(person).map(row => `<div class="node-detail">${esc(row)}</div>`).join("")}</div>`;
+function treeCard(role, person, extra = "") {
+  if (!person?.person_id) return `<div class="tree-card missing"><div class="tree-role">${esc(role)}</div><div class="tree-name">Not selected</div></div>`;
+  return `<div class="tree-card"><div class="tree-role">${esc(role)}</div><div class="tree-name">${esc(personTitle(person))}</div>${extra ? `<div class="tree-extra">${esc(extra)}</div>` : ""}${personSub(person).map(row => `<div class="tree-detail">${esc(row)}</div>`).join("")}</div>`;
 }
 
-function applicantDiagram(applicant, index) {
+function applicantTree(applicant, index) {
   const applicantPerson = personById(applicant.person_id);
   const father = personById(applicant.father_person_id);
   const mother = personById(applicant.mother_person_id);
@@ -42,7 +42,8 @@ function applicantDiagram(applicant, index) {
   const mapper = personById(applicant.mapper_person_id);
   const relation = applicant.mapper_relationship || "Mapper";
   const mapperExtra = mapper.person_id === applicantPerson.person_id ? "Same as applicant" : relation;
-  return `<section class="applicant-diagram"><div class="diagram-title"><span>${index + 1}. ${esc(personTitle(applicantPerson))}</span><small>${esc(applicantPerson.epic_number || "")}</small></div><div class="diagram-row parent-row">${nodeCard(father, "Father")}${nodeCard(mother, "Mother")}</div><div class="diagram-join"></div><div class="diagram-row applicant-row">${nodeCard(applicantPerson, "Applicant", relation === "Self" ? "Self mapping" : "")}</div><div class="diagram-row lower-row">${nodeCard(spouse, "Spouse")}${nodeCard(mapper, "Mapping Person", mapperExtra)}</div></section>`;
+  const applicantExtra = relation === "Self" ? "Self mapping" : "";
+  return `<section class="family-tree applicant-tree-block"><div class="tree-block-title"><span>${index + 1}. ${esc(personTitle(applicantPerson))}</span><small>${esc(applicantPerson.epic_number || "")}</small></div><div class="tree-row parents">${treeCard("Father", father)}${treeCard("Mother", mother)}</div><div class="tree-connector"></div><div class="tree-row center">${treeCard("Applicant", applicantPerson, applicantExtra)}</div><div class="tree-row partner">${treeCard("Spouse", spouse)}${treeCard("Mapping Person", mapper, mapperExtra)}</div></section>`;
 }
 
 function render() {
@@ -52,7 +53,7 @@ function render() {
     wrap.innerHTML = `<div class="empty">No applicants available to show family tree.</div>`;
     return;
   }
-  wrap.innerHTML = `<div class="family-tree-all">${stateRef.applicants.map(applicantDiagram).join("")}</div>`;
+  wrap.innerHTML = `<div class="family-tree-all">${stateRef.applicants.map(applicantTree).join("")}</div>`;
 }
 
 export async function initFamilyTree(state) {
