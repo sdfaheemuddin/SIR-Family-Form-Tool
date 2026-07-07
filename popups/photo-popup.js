@@ -1,7 +1,7 @@
 const MAX_PHOTO_BYTES = 1.8 * 1024 * 1024;
 let templateText = "";
 
-const VERSION = "26-07-06-ui-polish";
+const VERSION = "26-07-07";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
@@ -21,11 +21,18 @@ function openShell() {
   return backdrop;
 }
 
-function loadImage(file) {
+function loadImage(source) {
   return new Promise((resolve, reject) => {
-    if (!file || !file.type.startsWith("image/")) return reject(new Error("Please choose an image file."));
-    const url = URL.createObjectURL(file);
+    if (!source) return reject(new Error("Please choose an image file."));
     const image = new Image();
+    if (typeof source === "string") {
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Could not load photo."));
+      image.src = source;
+      return;
+    }
+    if (!source.type?.startsWith("image/")) return reject(new Error("Please choose an image file."));
+    const url = URL.createObjectURL(source);
     image.onload = () => { URL.revokeObjectURL(url); resolve(image); };
     image.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Could not load photo.")); };
     image.src = url;
@@ -44,8 +51,8 @@ function blobToDataUrl(blob) {
   });
 }
 
-export async function openPhotoPopup(file) {
-  const image = await loadImage(file);
+export async function openPhotoPopup(source) {
+  const image = await loadImage(source);
   const shell = openShell();
   shell.querySelector("[data-body]").innerHTML = await getTemplate();
   const canvas = shell.querySelector("[data-canvas]");
