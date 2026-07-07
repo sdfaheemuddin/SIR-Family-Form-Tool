@@ -2,7 +2,7 @@
 import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 import { backupState, clearState } from "./storage.js";
 import { downloadJson } from "./importExport.js";
-import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-07-2";
+import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-07-3";
 
 let stateRef;
 let commitRef;
@@ -38,9 +38,9 @@ function toast(message) {
   toast.timer = setTimeout(() => box.classList.remove("show"), 2200);
 }
 
-function mappingPhotoBlock(applicant, name) {
+function applicantTopPhoto(applicant, name) {
   if (!onlyValidPhoto(applicant.photo_data)) return "";
-  return `<div class="mapping-photo-card"><h5>Applicant Photo</h5><div class="readonly-photo-box"><img class="readonly-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download Photo</a></div></div>`;
+  return `<div class="applicant-top-photo"><img class="readonly-photo small-top-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small photo-download-link" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download</a></div>`;
 }
 
 function readCell(label, value, copy = true, display = value) {
@@ -94,9 +94,9 @@ function renderReadonlyCard(applicantId) {
   const name = data.applicant_name || "Applicant";
   const phone = onlyDigits(data["Phone Number"]);
   const aadhaar = onlyDigits(data["Aadhaar Number"]);
-  const photo = mappingPhotoBlock(applicant, name);
-  const mappingTop = `<div class="mapping-top-row ${photo ? "has-photo" : ""}"><div class="mapping-type-rel"><div class="copy-table-grid one-col">${readCell("Type", data["Mapping Type"], false)}</div><div class="copy-table-grid one-col">${readCell("Relationship", data["Mapping Relation"], false)}</div></div>${photo}</div>`;
-  box.innerHTML = `<div class="read-card enhanced-read-card"><h3>${esc(name)}</h3><section class="read-section"><div class="copy-table-grid two-cols">${readCell("EPIC ID", data["EPIC ID"])}${readCell("Phone Number", phone)}</div></section><section class="read-section"><h4>Mapping Details</h4>${mappingTop}<div class="copy-table-grid two-cols">${readCell("State", data["Mapping State"], false)}${readCell("District", data["Mapping District"], false)}</div><div class="copy-table-grid three-cols">${readCell("AC No", data["Mapping AC No Display"], false)}${readCell("Part No", data["Mapping Part No"], false)}${readCell("Sl No", data["Mapping Serial No"], false)}</div><div class="copy-table-grid four-cols">${readCell("Mapper Name", data["Mapper Name as per 2002"] || data["Mapping Name"], false)}${readCell("2002 EPIC Number", data["Mapper 2002 EPIC Number"], false)}${readCell("Relative", data["Mapper Relative Name"], false)}${readCell("Relation with Relative", data["Mapper Relationship with Relative"], false)}</div></section><section class="read-section"><h4>Applicant Details</h4><div class="copy-table-grid two-cols">${readCell("Date of Birth", dmy(data["Date of Birth"]))}${readCell("Aadhaar Number", aadhaar, true, formatAadhaar(aadhaar))}</div><h5>Father</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Father’s Name"])}${readCell("EPIC Number", data["Father’s EPIC Number"])}</div><h5>Mother</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Mother’s Name"])}${readCell("EPIC Number", data["Mother’s EPIC Number"])}</div><h5>Spouse</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Spouse’s Name"])}${readCell("EPIC Number", data["Spouse’s EPIC Number"])}</div></section></div>`;
+  const photo = applicantTopPhoto(applicant, name);
+  const mappingTop = `<div class="mapping-type-rel"><div class="copy-table-grid one-col">${readCell("Type", data["Mapping Type"], false)}</div><div class="copy-table-grid one-col">${readCell("Relationship", data["Mapping Relation"], false)}</div></div>`;
+  box.innerHTML = `<div class="read-card enhanced-read-card"><div class="read-card-title-row"><h3>${esc(name)}</h3>${photo}</div><section class="read-section"><div class="copy-table-grid two-cols">${readCell("EPIC ID", data["EPIC ID"])}${readCell("Phone Number", phone)}</div></section><section class="read-section"><h4>Mapping Details</h4>${mappingTop}<div class="copy-table-grid two-cols">${readCell("State", data["Mapping State"], false)}${readCell("District", data["Mapping District"], false)}</div><div class="copy-table-grid three-cols">${readCell("AC No", data["Mapping AC No Display"], false)}${readCell("Part No", data["Mapping Part No"], false)}${readCell("Sl No", data["Mapping Serial No"], false)}</div><div class="copy-table-grid four-cols">${readCell("Mapper Name", data["Mapper Name as per 2002"] || data["Mapping Name"], false)}${readCell("2002 EPIC Number", data["Mapper 2002 EPIC Number"], false)}${readCell("Relative", data["Mapper Relative Name"], false)}${readCell("Relation with Relative", data["Mapper Relationship with Relative"], false)}</div></section><section class="read-section"><h4>Applicant Details</h4><div class="copy-table-grid two-cols">${readCell("Date of Birth", dmy(data["Date of Birth"]))}${readCell("Aadhaar Number", aadhaar, true, formatAadhaar(aadhaar))}</div><h5>Father</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Father’s Name"])}${readCell("EPIC Number", data["Father’s EPIC Number"])}</div><h5>Mother</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Mother’s Name"])}${readCell("EPIC Number", data["Mother’s EPIC Number"])}</div><h5>Spouse</h5><div class="copy-table-grid two-cols">${readCell("Name", data["Spouse’s Name"])}${readCell("EPIC Number", data["Spouse’s EPIC Number"])}</div></section></div>`;
   box.querySelectorAll("[data-copy]").forEach(node => { node.addEventListener("click", () => copyText(node.dataset.copy)); node.addEventListener("keydown", event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); copyText(node.dataset.copy); } }); });
 }
 
