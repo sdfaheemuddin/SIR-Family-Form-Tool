@@ -2,7 +2,7 @@
 import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 import { backupState, clearState } from "./storage.js";
 import { downloadJson } from "./importExport.js";
-import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-03";
+import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-10";
 
 let stateRef;
 let commitRef;
@@ -24,18 +24,27 @@ function toast(message) { const box = $("#toast"); if (!box) return; box.textCon
 function applicantTopPhoto(applicant, name) { if (!onlyValidPhoto(applicant.photo_data)) return ""; return `<div class="applicant-top-photo"><img class="readonly-photo small-top-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small photo-download-link" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download</a></div>`; }
 function readCell(label, value, copy = true, display = value) { const cleanValue = clean(value); return `<div class="copy-table-cell ${copy ? "copyable-cell" : "no-copy"}" ${copy ? `role="button" tabindex="0" data-copy="${esc(cleanValue)}" title="Click to copy"` : ""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div>${copy ? `<div class="copy-chip">Copy</div>` : ""}</div>`; }
 async function copyText(value) { try { await navigator.clipboard.writeText(clean(value)); } catch { const temp = document.createElement("textarea"); temp.value = clean(value); document.body.append(temp); temp.select(); document.execCommand("copy"); temp.remove(); } toast("Copied."); }
+function dbField(label, value) { const text = clean(value); if (!text) return ""; return `<div class="db-field"><span class="db-label">${esc(label)}</span><span class="db-value">${esc(text)}</span></div>`; }
 
 function renderPeople() {
   const wrap = $("#peopleTableWrap");
   if (!stateRef.people.length) { wrap.innerHTML = `<div class="empty">No people saved yet.</div>`; return; }
-  wrap.innerHTML = `<table><thead><tr><th>Name</th><th>Current EPIC</th><th>2002 Details</th><th>Actions</th></tr></thead><tbody>${stateRef.people.map(person => `<tr><td>${esc(person.name)}</td><td>${esc(person.epic_number)}</td><td>${person.is_2002_available ? `<span class="badge">Yes</span><br>${esc(person.state_2002)}, ${esc(person.district_2002)}<br>AC ${esc(person.ac_no_2002)}${person.ac_name_2002 ? "-" + esc(person.ac_name_2002) : ""}, Part ${esc(person.part_no_2002)}, Sl ${esc(person.sl_no_2002)}` : "No"}</td><td><div class="row-actions"><button class="small secondary" data-edit-person="${esc(person.person_id)}">Edit</button><button class="small danger" data-delete-person="${esc(person.person_id)}">Delete</button></div></td></tr>`).join("")}</tbody></table>`;
+  wrap.innerHTML = `<div class="database-card-grid people-card-grid">${stateRef.people.map(person => {
+    const has2002 = person.is_2002_available;
+    const acLine = [person.ac_no_2002 ? `AC ${person.ac_no_2002}` : "", person.ac_name_2002 || "", person.part_no_2002 ? `Part ${person.part_no_2002}` : "", person.sl_no_2002 ? `Sl ${person.sl_no_2002}` : ""].filter(Boolean).join(" · ");
+    return `<article class="database-card person-db-card"><div class="db-card-head"><div><h3>${esc(person.name || "Unnamed person")}</h3>${person.epic_number ? `<div class="db-subtitle">${esc(person.epic_number)}</div>` : ""}</div><span class="badge">${has2002 ? "2002 Yes" : "2002 No"}</span></div><div class="db-card-body">${dbField("State / District", [person.state_2002, person.district_2002].filter(Boolean).join(", "))}${dbField("AC / Part / Sl", acLine)}${dbField("Name as per 2002", person.name_as_per_2002)}${dbField("Relative", person.relative_name_2002)}${dbField("2002 EPIC", person.epic_number_2002)}</div><div class="row-actions db-card-actions"><button class="small secondary" data-edit-person="${esc(person.person_id)}">Edit</button><button class="small danger" data-delete-person="${esc(person.person_id)}">Delete</button></div></article>`;
+  }).join("")}</div>`;
   wrap.querySelectorAll("[data-delete-person]").forEach(button => button.addEventListener("click", () => deletePerson(button.dataset.deletePerson)));
 }
 
 function renderApplicants() {
   const wrap = $("#applicantTableWrap");
   if (!stateRef.applicants.length) { wrap.innerHTML = `<div class="empty">No applicants saved yet.</div>`; return; }
-  wrap.innerHTML = `<table><thead><tr><th>Applicant</th><th>DOB</th><th>Mapper</th><th>Relation</th><th>Phone</th><th>Aadhaar</th><th>Status</th><th>Actions</th></tr></thead><tbody>${stateRef.applicants.map(applicant => `<tr><td>${esc(personName(applicant.person_id))}<br><small>${esc(personEpic(applicant.person_id))}</small></td><td>${esc(dmy(applicant.date_of_birth))}</td><td>${esc(personName(applicant.mapper_person_id))}</td><td>${esc(applicant.mapper_relationship)}</td><td>${esc(applicant.phone_number)}</td><td>${esc(formatAadhaar(applicant.aadhaar_number))}</td><td><label class="checkbox-line compact"><input type="checkbox" data-toggle-status="${esc(applicant.applicant_id)}" ${applicant.status_completed ? "checked" : ""}><span>${applicant.status_completed ? "Completed" : "Pending"}</span></label></td><td><div class="row-actions"><button class="small secondary" data-edit-applicant="${esc(applicant.applicant_id)}">Edit</button><button class="small danger" data-delete-applicant="${esc(applicant.applicant_id)}">Delete</button></div></td></tr>`).join("")}</tbody></table>`;
+  wrap.innerHTML = `<div class="database-card-grid applicant-card-grid">${stateRef.applicants.map(applicant => {
+    const name = personName(applicant.person_id) || "Unnamed applicant";
+    const epic = personEpic(applicant.person_id);
+    return `<article class="database-card applicant-db-card"><div class="db-card-head"><div><h3>${esc(name)}</h3>${epic ? `<div class="db-subtitle">${esc(epic)}</div>` : ""}</div><label class="checkbox-line compact db-status"><input type="checkbox" data-toggle-status="${esc(applicant.applicant_id)}" ${applicant.status_completed ? "checked" : ""}><span>${applicant.status_completed ? "Completed" : "Pending"}</span></label></div><div class="db-card-body">${dbField("Date of Birth", dmy(applicant.date_of_birth))}${dbField("Mapper", personName(applicant.mapper_person_id))}${dbField("Relationship", applicant.mapper_relationship)}${dbField("Phone", applicant.phone_number)}${dbField("Aadhaar", formatAadhaar(applicant.aadhaar_number))}${dbField("Father", personName(applicant.father_person_id))}${dbField("Mother", personName(applicant.mother_person_id))}${dbField("Spouse", personName(applicant.spouse_person_id))}</div><div class="row-actions db-card-actions"><button class="small secondary" data-edit-applicant="${esc(applicant.applicant_id)}">Edit</button><button class="small danger" data-delete-applicant="${esc(applicant.applicant_id)}">Delete</button></div></article>`;
+  }).join("")}</div>`;
   wrap.querySelectorAll("[data-delete-applicant]").forEach(button => button.addEventListener("click", () => deleteApplicant(button.dataset.deleteApplicant)));
   wrap.querySelectorAll("[data-toggle-status]").forEach(input => input.addEventListener("change", () => { const applicant = stateRef.applicants.find(row => row.applicant_id === input.dataset.toggleStatus); if (!applicant) return; applicant.status_completed = input.checked; commitRef(); refreshScreen(); }));
 }
@@ -82,5 +91,5 @@ function initTabs() {
   }));
 }
 function initZoom() { const key = "sir_family_forms_zoom"; const apply = value => { const zoom = Math.min(1.3, Math.max(0.8, Number(value) || 1)); document.documentElement.style.setProperty("--app-zoom", zoom); localStorage.setItem(key, zoom); }; apply(localStorage.getItem(key) || 1); $("#zoomOutBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) - 0.1).toFixed(2))); $("#zoomResetBtn")?.addEventListener("click", () => apply(1)); $("#zoomInBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) + 0.1).toFixed(2))); }
-function addVersion() { if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-07" })); }
+function addVersion() { if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-08" })); }
 export async function initUI(state, commit) { stateRef = state; commitRef = commit; initTabs(); initZoom(); addVersion(); initFileActions({ state: stateRef, commit: commitRef, renderAll: refreshScreen, toast }); $("#clearDataBtn").addEventListener("click", clearAll); $("#readonlyApplicantSelect").addEventListener("change", event => { event.target.dataset.selected = event.target.value; renderReadonlyCard(event.target.value); syncReadonlyButtons(); }); $("#markCompleteBtn").addEventListener("click", markComplete); $("#nextApplicantBtn").addEventListener("click", () => selectNext($("#readonlyApplicantSelect").value)); document.addEventListener("sir:data-changed", event => { if (event.detail?.selectedApplicantId) $("#readonlyApplicantSelect").dataset.selected = event.detail.selectedApplicantId; refreshScreen(); }); refreshScreen(); }
