@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=26-07-08-03">
-  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-03">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-04">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-04">
 </head>
 <body>
   <header class="app-header">
@@ -35,12 +35,12 @@
     </div>
     <div id="readonlyTab" class="tab-panel active" role="tabpanel"><section class="panel full" id="readonlySection"><div class="section-head"><h2>Applicant Data</h2></div><div class="readonly-actions readonly-top-actions"><button id="readonlyNewApplicantBtn" type="button">New Applicant</button><button id="readonlyEditApplicantBtn" type="button" class="secondary">Edit</button></div><div class="readonly-picker"><label class="stacked">Select applicant<select id="readonlyApplicantSelect"></select></label></div><div id="readonlyCard"></div><div class="readonly-actions readonly-actions-bottom"><button id="markCompleteBtn" type="button">Mark Complete</button><button id="nextApplicantBtn" type="button" class="secondary">Next</button></div></section></div>
     <div id="databaseTab" class="tab-panel database-grid" role="tabpanel"><section class="panel" id="applicantsSection"><div class="section-head"><h2>Applicant Database</h2><button id="addApplicantBtn">Add Applicant</button></div><div id="applicantTableWrap" class="table-wrap"></div></section><section class="panel" id="peopleSection"><div class="section-head"><h2>People Database</h2><button id="addPersonBtn">Add Person</button></div><div id="peopleTableWrap" class="table-wrap"></div></section></div>
-    <div id="familyTreeTab" class="tab-panel" role="tabpanel"><iframe id="familyTreeTabFrame" class="family-tree-tab-frame" src="./family-tree.html?v=26-07-08-03" title="Family Tree" loading="lazy"></iframe></div>
+    <div id="familyTreeTab" class="tab-panel" role="tabpanel"><iframe id="familyTreeTabFrame" class="family-tree-tab-frame" src="./family-tree.html?v=26-07-08-04" title="Family Tree" loading="lazy"></iframe></div>
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="modalRoot"></div>
   <script>
-    const FAMILY_TREE_VERSION = "26-07-08-03";
+    const FAMILY_TREE_VERSION = "26-07-08-04";
     document.addEventListener("click", event => {
       const button = event.target.closest?.('[data-tab-target="familyTreeTab"]');
       if (!button) return;
@@ -49,6 +49,6 @@
       frame.src = `./family-tree.html?v=${FAMILY_TREE_VERSION}&t=${Date.now()}`;
     });
   </script>
-  <script type="module" src="app.js?v=26-07-08-03"></script>
+  <script type="module" src="app.js?v=26-07-08-04"></script>
 </body>
 </html>
