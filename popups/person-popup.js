@@ -4,7 +4,7 @@ let stateRef;
 let commitRef;
 let templateText = "";
 
-const VERSION = "26-07-08-13";
+const VERSION = "26-07-08-14";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
