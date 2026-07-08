@@ -2,6 +2,8 @@
 import { loadState, saveState } from "./storage.js";
 import { initUI } from "./ui.js";
 import { normalizeApplicant, normalizePerson } from "./core.js";
+import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-07-13";
+import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-07-13";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
@@ -20,6 +22,7 @@ const state = {
 const commit = () => saveState(state);
 
 window.addEventListener("error", event => console.error("App error", event.error));
+window.addEventListener("unhandledrejection", event => console.error("App promise error", event.reason));
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -31,3 +34,5 @@ if ("serviceWorker" in navigator) {
 
 commit(); // Save normalized/migrated structure.
 initUI(state, commit);
+initPersonPopupOverrides(state, commit);
+initApplicantPopupOverrides(state, commit);

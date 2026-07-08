@@ -1,6 +1,4 @@
-// Cache-first service worker for GitHub Pages project sites.
-// Increment this version when files change.
-const CACHE_NAME = "sir-family-forms-v21-github-pages";
+const CACHE_NAME = "sir-family-forms-v26-07-07-13";
 const BASE_URL = new URL("./", self.location);
 const INDEX_URL = new URL("./index.html", self.location).href;
 
@@ -11,12 +9,22 @@ const ASSET_PATHS = [
   "./core.js",
   "./storage.js",
   "./ui.js",
+  "./family-tree.html",
+  "./family-tree.js",
   "./pdf.js",
   "./importExport.js",
   "./app.js",
   "./manifest.json",
   "./service-worker.js",
-  "./icon.png"
+  "./icon.png",
+  "./popups/person-popup.html",
+  "./popups/person-popup.js",
+  "./popups/person-popup.css",
+  "./popups/applicant-popup.html",
+  "./popups/applicant-popup.js",
+  "./popups/photo-popup.html",
+  "./popups/photo-popup.js",
+  "./popups/file-actions/file-actions.js"
 ];
 
 const ASSETS = ASSET_PATHS.map(path => new URL(path, BASE_URL).href);
@@ -37,10 +45,8 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
-
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) return;
-
   event.respondWith(
     caches.match(event.request).then(cached =>
       cached || fetch(event.request).then(response => {

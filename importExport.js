@@ -11,8 +11,7 @@ import {
 export function buildExportPayload(state) {
   return {
     people_database: state.people,
-    applicant_database: state.applicants,
-    readonly_applicant_data: allReadonly(state.applicants, state.people)
+    applicant_database: state.applicants
   };
 }
 
@@ -28,10 +27,11 @@ export function yymmddhhmm(date = new Date()) {
   return `${String(date.getFullYear()).slice(2)}${pad(date.getMonth() + 1)}${pad(date.getDate())}${pad(date.getHours())}${pad(date.getMinutes())}`;
 }
 
-export function sirFileBaseFromState(state, date = new Date()) {
-  const payload = buildExportPayload(state);
-  const first = payload.readonly_applicant_data[0]?.applicant_name || "NoApplicant";
-  return `SIR2026_${safeName(first)}_${yymmddhhmm(date)}`;
+export function sirFileBaseFromState(state, date = new Date(), mode = "") {
+  const readonlyRows = allReadonly(state.applicants || [], state.people || []);
+  const first = readonlyRows[0]?.applicant_name || "NoApplicant";
+  const modePart = mode ? `_${safeName(mode)}` : "";
+  return `SIR2026_${safeName(first)}${modePart}_${yymmddhhmm(date)}`;
 }
 
 export function downloadJson(state) {
@@ -67,7 +67,7 @@ export async function parseImportFile(file) {
 
   const personIds = new Set();
   people.forEach((p, i) => {
-    validatePerson(p).forEach(e => errors.push(`Person row ${i + 1}: ${e}`));
+    validatePerson(p, { people, editingId: p.person_id }).forEach(e => errors.push(`Person row ${i + 1}: ${e}`));
     if (personIds.has(p.person_id)) errors.push(`Person row ${i + 1}: duplicate person_id.`);
     personIds.add(p.person_id);
   });

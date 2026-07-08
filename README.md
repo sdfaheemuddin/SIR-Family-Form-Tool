@@ -2,7 +2,7 @@
 
 GitHub Pages-ready version of the latest **SIR Family Forms PWA**.
 
-This is an offline-capable helper app for maintaining People and Applicant data, JSON backup/import, Online Form PDF, Offline Form PDF, applicant photos, and Section 3 read-only photo download.
+This is an offline-capable helper app for maintaining People and Applicant data, JSON backup/import, Online Form PDF, Offline Form PDF, applicant photos, and Applicant Data photo download.
 
 > Disclaimer: This is not an official mapping or government form. This app is only a helper tool for data entry.
 
@@ -15,12 +15,14 @@ index.html
 manifest.json
 service-worker.js
 styles.css
+enhancements.css
 core.js
 storage.js
 ui.js
 pdf.js
 importExport.js
 app.js
+enhancements.js
 icon.png
 README.md
 ```
@@ -36,7 +38,7 @@ SIR Family Form Tool
 Recommended GitHub Pages setup:
 
 1. Create/open your GitHub repository.
-2. Upload all files from this ZIP directly to the repository root.
+2. Upload all files directly to the repository root.
 3. Commit the files.
 4. Open **Settings** → **Pages**.
 5. Under **Build and deployment**, choose:
@@ -52,7 +54,7 @@ For a project site, the URL will usually look like:
 https://YOUR-USERNAME.github.io/SIR-Family-Form-Tool/
 ```
 
-GitHub may encode spaces in the repository URL. A repo name without spaces is usually easier for sharing, but this build uses relative paths so it can run from a project-site subpath.
+This build uses relative paths so it can run from a GitHub Pages project-site subpath.
 
 ## Install as PWA on Android
 
@@ -74,26 +76,27 @@ The app works offline after the first successful load.
 - Photos are saved inside applicant records as image data URLs, so JSON backups can become large.
 - Online/Offline PDFs include only applicants whose **PDF** checkbox is checked in the Applicant Database table.
 
-## Features kept
+## Features kept and updated
 
-- People Database
-- Applicant Database
-- Applicant Data — Read Only
+- Applicant Data tab
+- Database tab with Applicant Database first and People Database second
 - JSON export/import
 - Online Form PDF
 - Offline Form PDF
 - Applicant photo upload
-- Section 3 photo preview and download
-- Phone WhatsApp links in Applicant Database table
+- Applicant Data photo preview and download
+- Phone WhatsApp links with `SIR acknowledgement` message
 - Copy-by-click read-only values
-- Mark Complete and Next workflow
+- Date of Birth copy/display in `DD-MM-YYYY` format
+- Mark Complete, Next, and New Applicant workflow
 - Offline PWA support
 - App zoom controls
+- Version badge: `26-07-06`
 
 ## Service worker cache
 
 Current cache version:
 
 ```text
-sir-family-forms-v21-github-pages
+sir-family-forms-v26-07-06
 ```

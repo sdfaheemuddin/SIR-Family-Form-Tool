@@ -1,0 +1,22 @@
+<div class="photo-editor-body">
+  <canvas class="photo-crop-canvas" width="270" height="360" data-canvas></canvas>
+  <div class="photo-editor-controls">
+    <label class="stacked">
+      Zoom
+      <input type="range" min="1" max="3" step="0.01" value="1" data-zoom>
+    </label>
+    <label class="stacked">
+      Move Left / Right
+      <input type="range" min="-100" max="100" value="0" data-x>
+    </label>
+    <label class="stacked">
+      Move Up / Down
+      <input type="range" min="-100" max="100" value="0" data-y>
+    </label>
+    <button type="button" class="secondary" data-bg>Remove background + white background</button>
+  </div>
+</div>
+<div class="modal-actions">
+  <button type="button" class="secondary" data-cancel>Cancel</button>
+  <button type="button" data-use>Use Photo</button>
+</div>
