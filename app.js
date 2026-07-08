@@ -2,8 +2,8 @@
 import { loadState, saveState } from "./storage.js";
 import { initUI } from "./ui.js";
 import { normalizeApplicant, normalizePerson } from "./core.js";
-import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-07";
-import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-07";
+import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-08";
+import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-08";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
