@@ -1,3 +1,12 @@
+.modal-backdrop {
+  z-index: 8000;
+}
+
+.modal {
+  position: relative;
+  z-index: 8001;
+}
+
 .native-person-popup .person-popup-form {
   display: block;
 }
