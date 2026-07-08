@@ -4,7 +4,7 @@ let stateRef;
 let commitRef;
 let templateText = "";
 
-const VERSION = "26-07-07";
+const VERSION = "26-07-08-03";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
@@ -55,7 +55,7 @@ function readPerson(form, draft) {
     sl_no_2002: form.elements.sl_no_2002.value,
     name_as_per_2002: form.elements.name_as_per_2002.value,
     relative_name_2002: form.elements.relative_name_2002.value,
-    relative_relationship_2002: form.elements.relative_relationship_2002.value,
+    relative_relationship_2002: "",
     epic_number_2002: form.elements.epic_number_2002.value
   });
 }
