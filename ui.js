@@ -2,7 +2,7 @@
 import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 import { backupState, clearState } from "./storage.js";
 import { downloadJson } from "./importExport.js";
-import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-09";
+import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-14";
 
 let stateRef;
 let commitRef;
