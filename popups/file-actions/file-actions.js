@@ -72,12 +72,12 @@ function hasAadhaar(applicant) {
 
 function offlineReady(source, applicant) {
   const mapper = personById(source, applicant.mapper_person_id);
-  return Boolean(mapper.ac_name_2002 && mapper.name_as_per_2002 && mapper.relative_name_2002 && mapper.relative_relationship_2002);
+  return Boolean(mapper.ac_name_2002 && mapper.name_as_per_2002 && mapper.relative_name_2002);
 }
 
 function eligibility(applicant, source, mode) {
   if (mode === "online" && !hasAadhaar(applicant)) return { ok: false, message: "Aadhaar number not provided, it's mandatory for online." };
-  if (mode === "offline" && !offlineReady(source, applicant)) return { ok: false, message: "AC name, Name as per 2002, Relative name, and Relationship with relative are mandatory for offline." };
+  if (mode === "offline" && !offlineReady(source, applicant)) return { ok: false, message: "AC name, Name as per 2002, and Relative name are mandatory for offline." };
   return { ok: true, message: "" };
 }
 

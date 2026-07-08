@@ -89,6 +89,70 @@ html, body {
   padding: .5rem;
 }
 
+.ft-toggle-line {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .45rem .65rem;
+  border: 1px solid var(--ft-line);
+  border-radius: 10px;
+  background: var(--ft-bg);
+  color: var(--ft-green);
+  font-weight: 800;
+  min-height: 36px;
+}
+
+.ft-toggle-line input {
+  width: auto;
+  margin: 0;
+}
+
+.ft-selected-panel {
+  margin: .75rem .75rem 0;
+  padding: .8rem;
+  background: #fff;
+  border: 1px solid var(--ft-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(23, 34, 29, .06);
+}
+
+.ft-selected-panel[hidden] { display: none; }
+
+.ft-selected-panel h3 {
+  margin: 0 0 .55rem;
+  color: var(--ft-green);
+  font-size: 1rem;
+}
+
+.ft-selected-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: .5rem;
+}
+
+.ft-selected-cell {
+  border: 1px solid var(--ft-line);
+  border-radius: 10px;
+  padding: .5rem .6rem;
+  background: var(--ft-bg);
+}
+
+.ft-selected-label {
+  display: block;
+  color: var(--ft-muted);
+  font-size: .72rem;
+  font-weight: 800;
+  margin-bottom: .18rem;
+}
+
+.ft-selected-value {
+  display: block;
+  color: var(--ft-text);
+  font-size: .9rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
 .ft-canvas-wrap {
   overflow: auto;
   padding: .75rem;
@@ -222,13 +286,50 @@ html, body {
   font-weight: 700;
 }
 
+.ft-action {
+  cursor: pointer;
+}
+
+.ft-action-bg {
+  fill: #ffffff;
+  stroke: #dce8e2;
+  stroke-width: 1.2;
+}
+
+.ft-action:hover .ft-action-bg {
+  fill: #eaf3ef;
+  stroke: #195b45;
+}
+
+.ft-action-symbol {
+  fill: #195b45;
+  font: 800 12px system-ui, sans-serif;
+  pointer-events: none;
+}
+
+.ft-extra-detail text {
+  font: 600 10.5px system-ui, sans-serif;
+  fill: #45524c;
+}
+
+.ft-extra-detail path,
+.ft-extra-detail rect,
+.ft-extra-detail circle,
+.ft-extra-detail line {
+  stroke: #195b45;
+  fill: none;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .ft-empty {
   color: var(--ft-muted);
   font-size: .95rem;
   max-width: 40rem;
 }
 
-#ftToast {
+#ftToast, #toast {
   position: fixed;
   left: 50%;
   bottom: 1.25rem;
@@ -241,9 +342,10 @@ html, body {
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s, transform .2s;
+  z-index: 4000;
 }
 
-#ftToast.show {
+#ftToast.show, #toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }

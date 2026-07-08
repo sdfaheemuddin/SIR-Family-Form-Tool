@@ -1,6 +1,6 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-07-6";
-import { openPhotoPopup } from "./photo-popup.js?v=26-07-07-6";
+import { openPersonPopup } from "./person-popup.js?v=26-07-08-13";
+import { openPhotoPopup } from "./photo-popup.js?v=26-07-08-13";
 
 const ADD_NEW = "__add_new__";
 const DOB_MAX = "2009-12-31";
@@ -12,7 +12,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-07-6");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-08-13");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
@@ -34,6 +34,10 @@ function openShell(title) {
   backdrop.querySelector("[data-close]").addEventListener("click", () => backdrop.remove());
   $("#modalRoot").append(backdrop);
   return backdrop;
+}
+
+function hasCurrentEpic(person) {
+  return Boolean(String(person?.epic_number || "").trim());
 }
 
 function optionList({ filter = null, exclude = new Set(), add = true, blank = true, force = [] } = {}) {
@@ -73,7 +77,7 @@ function setSelects(form, draft, forcedValues = null) {
   const spouse = form.elements.spouse_person_id;
   const usedApplicants = new Set(stateRef.applicants.filter(a => a.applicant_id !== draft.applicant_id).map(a => a.person_id));
   const old = forcedValues || { applicant: applicant.value, mapper: mapper.value, father: father.value, mother: mother.value, spouse: spouse.value };
-  applicant.innerHTML = optionList({ exclude: usedApplicants, force: old.applicant ? [old.applicant] : [] });
+  applicant.innerHTML = optionList({ filter: hasCurrentEpic, exclude: usedApplicants, force: old.applicant ? [old.applicant] : [] });
   keep(applicant, old.applicant);
   const applicantId = applicant.value || "";
   if (relation.value === "Self") {
@@ -152,6 +156,7 @@ async function applyPhotoEdit(source, form, setPhoto) {
 }
 
 export async function openApplicantPopup(applicantId = "") {
+  if (!stateRef || !commitRef) throw new Error("Applicant popup is not initialized.");
   const existing = stateRef.applicants.find(a => a.applicant_id === applicantId);
   const draft = existing ? { ...existing } : blankApplicant();
   const shell = openShell(existing ? "Edit Applicant" : "Add Applicant");
@@ -217,7 +222,7 @@ export function initApplicantPopupOverrides(state, commit) {
   stateRef = state;
   commitRef = commit;
   document.addEventListener("click", event => {
-    const addButton = event.target.closest("#addApplicantBtn,#readonlyNewApplicantBtn");
+    const addButton = event.target.closest("#addApplicantBtn,#readonlyNewApplicantBtn,#ftAddApplicant");
     const editButton = event.target.closest("[data-edit-applicant],#readonlyEditApplicantBtn");
     if (!addButton && !editButton) return;
     event.preventDefault();
