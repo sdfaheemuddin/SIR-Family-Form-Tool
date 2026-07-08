@@ -7,24 +7,22 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=26-07-08-04">
-  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-04">
-  <link rel="stylesheet" href="family-tree.css?v=26-07-08-04">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-05">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-05">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-05">
+  <style>
+    .native-applicant-popup .modal,
+    .native-person-popup .modal {
+      max-height: calc(100vh - 24px);
+      overflow: auto;
+    }
+  </style>
 </head>
 <body>
   <div class="ft-toolbar" role="toolbar" aria-label="Family Tree tools">
     <button id="ftAddApplicant" type="button">Add Applicant</button>
     <label class="ft-toggle-line"><input id="ftShowDetails" type="checkbox"><span>Show details</span></label>
-    <button id="ftExportSvg" type="button">Export SVG</button>
-    <button id="ftExportPng" type="button">Export Image</button>
     <button id="ftExportPdf" type="button" class="secondary">Export PDF</button>
-    <button id="ftCopyScript" type="button" class="secondary">Copy FamilyScript</button>
-    <button id="ftDownloadScript" type="button" class="secondary">Download FamilyScript</button>
-    <div class="ft-zoom-group" aria-label="Zoom controls">
-      <button id="ftZoomOut" type="button" class="secondary" aria-label="Zoom out">&minus;</button>
-      <button id="ftZoomFit" type="button" class="secondary" aria-label="Fit">Fit</button>
-      <button id="ftZoomIn" type="button" class="secondary" aria-label="Zoom in">&plus;</button>
-    </div>
   </div>
 
   <main class="ft-canvas-wrap">
@@ -35,51 +33,23 @@
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="ftToast" role="status" aria-live="polite"></div>
 
-  <script>
-    function fitFamilyTreeToWindow() {
-      const wrap = document.querySelector(".ft-canvas-wrap");
-      const svg = document.querySelector("svg.family-tree-svg");
-      if (!wrap || !svg) return;
-
-      const vb = svg.viewBox?.baseVal;
-      const svgWidth = vb?.width || Number(svg.getAttribute("width")) || svg.getBoundingClientRect().width;
-      const svgHeight = vb?.height || Number(svg.getAttribute("height")) || svg.getBoundingClientRect().height;
-
-      if (!svgWidth || !svgHeight) return;
-
-      const availableWidth = Math.max(260, wrap.clientWidth - 24);
-      const availableHeight = Math.max(260, wrap.clientHeight - 24);
-
-      const fitZoom = Math.min(1, availableWidth / svgWidth, availableHeight / svgHeight);
-
-      svg.style.transform = `scale(${fitZoom})`;
-      svg.style.transformOrigin = "top left";
-
-      wrap.scrollLeft = 0;
-      wrap.scrollTop = 0;
-    }
-
-    document.addEventListener("click", event => {
-      if (event.target?.id !== "ftZoomFit") return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      setTimeout(fitFamilyTreeToWindow, 0);
-    }, true);
-  </script>
-
   <script type="module">
-    import "./family-tree.js?v=26-07-08-04";
+    import "./family-tree.js?v=26-07-08-05";
     import { loadState, saveState } from "./storage.js";
     import { formatAadhaar } from "./core.js";
-    import { openPersonPopup, initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-04";
-    import { openApplicantPopup, initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-04";
+    import { openPersonPopup, initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-05";
+    import { openApplicantPopup, initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-05";
 
     const DETAIL_KEY = "sir_family_tree_show_details";
+    const NORMAL_BOX_H = 90;
+    const DETAIL_BOX_H = 118;
     const state = loadState();
     const commit = () => saveState(state);
     const showDetailsInput = document.getElementById("ftShowDetails");
     const canvas = document.getElementById("familyTreeCanvas");
     let enhancing = false;
+    let baseSvgHeight = 0;
+    let baseSvgViewBox = null;
 
     initPersonPopupOverrides(state, commit);
     initApplicantPopupOverrides(state, commit);
@@ -106,14 +76,25 @@
       return state.applicants.find(applicant => applicant.person_id === id) || null;
     }
 
+    function splitNameEpic(text) {
+      const raw = String(text || "").trim();
+      const match = raw.match(/^(.*?)\s*\(([^()]*)\)\s*$/);
+      if (!match) return { name: raw, epic: "" };
+      return { name: match[1].trim(), epic: match[2].trim() };
+    }
+
     function lineIcon(type, x, y) {
       if (type === "phone") return `<path d="M${x+1} ${y-7} C${x+1} ${y-3} ${x+5} ${y+1} ${x+9} ${y+1} L${x+11} ${y-1} L${x+8} ${y-4} L${x+6} ${y-2} C${x+4} ${y-3} ${x+3} ${y-4} ${x+2} ${y-6} L${x+4} ${y-8} L${x+2} ${y-10} Z"></path>`;
       if (type === "file") return `<path d="M${x+2} ${y-10} H${x+8} L${x+12} ${y-6} V${y+2} H${x+2} Z"></path><path d="M${x+8} ${y-10} V${y-6} H${x+12}"></path>`;
       return `<rect x="${x+1}" y="${y-10}" width="12" height="12" rx="1.5"></rect><line x1="${x+1}" y1="${y-6}" x2="${x+13}" y2="${y-6}"></line><line x1="${x+4}" y1="${y-12}" x2="${x+4}" y2="${y-8}"></line><line x1="${x+10}" y1="${y-12}" x2="${x+10}" y2="${y-8}"></line>`;
     }
 
-    function detailLine(type, y, text) {
-      return `<g class="ft-extra-detail" data-ft-extra="1">${lineIcon(type, 14, y)}<text x="32" y="${y}">${esc(trunc(text, 28))}</text></g>`;
+    function detailLine(type, y, text, limit = 26) {
+      return `<g class="ft-extra-detail" data-ft-extra="1">${lineIcon(type, 14, y)}<text x="32" y="${y}">${esc(trunc(text, limit))}</text></g>`;
+    }
+
+    function plainDetail(y, text, limit = 33) {
+      return `<g class="ft-extra-detail" data-ft-extra="1"><text x="14" y="${y}">${esc(trunc(text, limit))}</text></g>`;
     }
 
     function actionIcon(action, x, label, symbol) {
@@ -124,6 +105,19 @@
       </g>`;
     }
 
+    function setSvgExtraHeight(svg, showDetails) {
+      if (!baseSvgHeight) {
+        baseSvgHeight = Number(svg.getAttribute("height")) || svg.viewBox?.baseVal?.height || 0;
+        baseSvgViewBox = svg.getAttribute("viewBox") || "";
+      }
+      if (!baseSvgHeight || !baseSvgViewBox) return;
+      const parts = baseSvgViewBox.split(/\s+/).map(Number);
+      if (parts.length !== 4 || parts.some(Number.isNaN)) return;
+      const extra = showDetails ? (DETAIL_BOX_H - NORMAL_BOX_H + 8) : 0;
+      svg.setAttribute("height", String(baseSvgHeight + extra));
+      svg.setAttribute("viewBox", `${parts[0]} ${parts[1]} ${parts[2]} ${parts[3] + extra}`);
+    }
+
     function enhanceTree() {
       if (enhancing) return;
       enhancing = true;
@@ -131,24 +125,49 @@
         const svg = canvas?.querySelector("svg.family-tree-svg");
         if (!svg) return;
         const showDetails = showDetailsInput?.checked;
+        setSvgExtraHeight(svg, showDetails);
         svg.querySelectorAll(".ft-person").forEach(nodeEl => {
-          nodeEl.querySelectorAll("[data-ft-extra],.ft-action").forEach(el => el.remove());
-          nodeEl.querySelectorAll(".ft-meta").forEach(el => { el.style.display = "none"; });
+          nodeEl.querySelectorAll("[data-ft-extra],.ft-action,[data-ft-name-line],[data-ft-epic-line]").forEach(el => el.remove());
+
+          const rect = nodeEl.querySelector(".ft-box");
+          if (rect) rect.setAttribute("height", showDetails ? String(DETAIL_BOX_H) : String(NORMAL_BOX_H));
+
+          const originalName = nodeEl.querySelector(".ft-name:not([data-ft-name-line])");
+          if (originalName) originalName.style.display = "none";
 
           const personId = nodeEl.getAttribute("data-node-id") || "";
           const person = personById(personId);
           const applicant = applicantByPersonId(personId);
+          const parsed = splitNameEpic(originalName?.textContent || "");
+          const name = person?.name || parsed.name || "Unknown";
+          const epic = person?.epic_number || parsed.epic || "";
+          const nameX = Number(originalName?.getAttribute("x")) || 14;
+
+          nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-name" data-ft-name-line="1" x="${nameX}" y="20">${esc(trunc(name, 25))}</text>`);
+          if (epic) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-epic-line="1" x="${nameX}" y="36">${esc(trunc(epic, 28))}</text>`);
+
+          const metaLines = Array.from(nodeEl.querySelectorAll(".ft-meta:not([data-ft-epic-line])"));
+          metaLines.forEach((line, index) => {
+            line.style.display = showDetails ? "" : "none";
+            line.setAttribute("x", "14");
+            line.setAttribute("y", String(88 + index * 12));
+          });
 
           let actions = "";
           if (applicant) actions += actionIcon("applicant", 204, "Edit applicant details", "✎");
-          if (person) actions += actionIcon("person", 227, "Edit people details", "👤");
+          if (person) actions += actionIcon("person", 227, "Edit people details", "▤");
           if (actions) nodeEl.insertAdjacentHTML("beforeend", actions);
 
-          if (!showDetails || !applicant) return;
+          if (!showDetails) return;
           const details = [];
-          if (applicant.phone_number) details.push(detailLine("phone", 46, applicant.phone_number));
-          if (applicant.aadhaar_number) details.push(detailLine("file", 62, formatAadhaar(applicant.aadhaar_number)));
-          if (applicant.date_of_birth) details.push(detailLine("calendar", 78, dmy(applicant.date_of_birth)));
+          if (applicant?.phone_number) details.push(detailLine("phone", 50, applicant.phone_number, 26));
+          if (applicant?.aadhaar_number) details.push(detailLine("file", 63, formatAadhaar(applicant.aadhaar_number), 26));
+          if (applicant?.date_of_birth) details.push(detailLine("calendar", 76, dmy(applicant.date_of_birth), 26));
+          if (!applicant && !metaLines.length && person) {
+            if (person.state_2002 || person.district_2002) details.push(plainDetail(50, [person.state_2002, person.district_2002].filter(Boolean).join(", ")));
+            const acLine = [person.ac_no_2002 ? `AC: ${person.ac_no_2002}` : "", person.part_no_2002 ? `Part: ${person.part_no_2002}` : "", person.sl_no_2002 ? `Serial: ${person.sl_no_2002}` : ""].filter(Boolean).join(", ");
+            if (acLine) details.push(plainDetail(63, acLine));
+          }
           if (details.length) nodeEl.insertAdjacentHTML("beforeend", details.join(""));
         });
       } finally {
