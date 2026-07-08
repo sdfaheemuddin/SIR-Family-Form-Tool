@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=26-07-08-05">
-  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-05">
-  <link rel="stylesheet" href="family-tree.css?v=26-07-08-05">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-06">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-06">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-06">
   <style>
     .native-applicant-popup .modal,
     .native-person-popup .modal {
@@ -21,9 +21,14 @@
 <body>
   <div class="ft-toolbar" role="toolbar" aria-label="Family Tree tools">
     <button id="ftAddApplicant" type="button">Add Applicant</button>
-    <label class="ft-toggle-line"><input id="ftShowDetails" type="checkbox"><span>Show details</span></label>
+    <button id="ftToggleDetailsPanel" type="button" class="secondary">Show selected details</button>
     <button id="ftExportPdf" type="button" class="secondary">Export PDF</button>
   </div>
+
+  <section id="ftSelectedPanel" class="ft-selected-panel" hidden>
+    <h3 id="ftSelectedTitle">Selected details</h3>
+    <div id="ftSelectedContent" class="ft-selected-grid"></div>
+  </section>
 
   <main class="ft-canvas-wrap">
     <div id="familyTreeCanvas" aria-live="polite"></div>
@@ -34,22 +39,23 @@
   <div id="ftToast" role="status" aria-live="polite"></div>
 
   <script type="module">
-    import "./family-tree.js?v=26-07-08-05";
+    import "./family-tree.js?v=26-07-08-06";
     import { loadState, saveState } from "./storage.js";
     import { formatAadhaar } from "./core.js";
-    import { openPersonPopup, initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-05";
-    import { openApplicantPopup, initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-05";
+    import { openPersonPopup, initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-06";
+    import { openApplicantPopup, initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-06";
 
-    const DETAIL_KEY = "sir_family_tree_show_details";
-    const NORMAL_BOX_H = 90;
-    const DETAIL_BOX_H = 118;
+    const PANEL_KEY = "sir_family_tree_selected_panel";
     const state = loadState();
     const commit = () => saveState(state);
-    const showDetailsInput = document.getElementById("ftShowDetails");
     const canvas = document.getElementById("familyTreeCanvas");
+    const panel = document.getElementById("ftSelectedPanel");
+    const panelTitle = document.getElementById("ftSelectedTitle");
+    const panelContent = document.getElementById("ftSelectedContent");
+    const panelButton = document.getElementById("ftToggleDetailsPanel");
     let enhancing = false;
-    let baseSvgHeight = 0;
-    let baseSvgViewBox = null;
+    let selectedPersonId = "";
+    let panelEnabled = localStorage.getItem(PANEL_KEY) === "1";
 
     initPersonPopupOverrides(state, commit);
     initApplicantPopupOverrides(state, commit);
@@ -63,7 +69,7 @@
       return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
     }
 
-    function trunc(value, limit = 24) {
+    function trunc(value, limit = 25) {
       const text = String(value || "").trim();
       return text.length > limit ? text.slice(0, limit - 1) + "…" : text;
     }
@@ -83,20 +89,6 @@
       return { name: match[1].trim(), epic: match[2].trim() };
     }
 
-    function lineIcon(type, x, y) {
-      if (type === "phone") return `<path d="M${x+1} ${y-7} C${x+1} ${y-3} ${x+5} ${y+1} ${x+9} ${y+1} L${x+11} ${y-1} L${x+8} ${y-4} L${x+6} ${y-2} C${x+4} ${y-3} ${x+3} ${y-4} ${x+2} ${y-6} L${x+4} ${y-8} L${x+2} ${y-10} Z"></path>`;
-      if (type === "file") return `<path d="M${x+2} ${y-10} H${x+8} L${x+12} ${y-6} V${y+2} H${x+2} Z"></path><path d="M${x+8} ${y-10} V${y-6} H${x+12}"></path>`;
-      return `<rect x="${x+1}" y="${y-10}" width="12" height="12" rx="1.5"></rect><line x1="${x+1}" y1="${y-6}" x2="${x+13}" y2="${y-6}"></line><line x1="${x+4}" y1="${y-12}" x2="${x+4}" y2="${y-8}"></line><line x1="${x+10}" y1="${y-12}" x2="${x+10}" y2="${y-8}"></line>`;
-    }
-
-    function detailLine(type, y, text, limit = 26) {
-      return `<g class="ft-extra-detail" data-ft-extra="1">${lineIcon(type, 14, y)}<text x="32" y="${y}">${esc(trunc(text, limit))}</text></g>`;
-    }
-
-    function plainDetail(y, text, limit = 33) {
-      return `<g class="ft-extra-detail" data-ft-extra="1"><text x="14" y="${y}">${esc(trunc(text, limit))}</text></g>`;
-    }
-
     function actionIcon(action, x, label, symbol) {
       return `<g class="ft-action" data-ft-action="${action}" tabindex="0" role="button" aria-label="${esc(label)}">
         <title>${esc(label)}</title>
@@ -105,17 +97,47 @@
       </g>`;
     }
 
-    function setSvgExtraHeight(svg, showDetails) {
-      if (!baseSvgHeight) {
-        baseSvgHeight = Number(svg.getAttribute("height")) || svg.viewBox?.baseVal?.height || 0;
-        baseSvgViewBox = svg.getAttribute("viewBox") || "";
+    function selectedCell(label, value) {
+      const text = String(value || "").trim();
+      if (!text) return "";
+      return `<div class="ft-selected-cell"><span class="ft-selected-label">${esc(label)}</span><span class="ft-selected-value">${esc(text)}</span></div>`;
+    }
+
+    function renderSelectedPanel() {
+      panelButton.textContent = panelEnabled ? "Hide selected details" : "Show selected details";
+      if (!panelEnabled) {
+        panel.hidden = true;
+        return;
       }
-      if (!baseSvgHeight || !baseSvgViewBox) return;
-      const parts = baseSvgViewBox.split(/\s+/).map(Number);
-      if (parts.length !== 4 || parts.some(Number.isNaN)) return;
-      const extra = showDetails ? (DETAIL_BOX_H - NORMAL_BOX_H + 8) : 0;
-      svg.setAttribute("height", String(baseSvgHeight + extra));
-      svg.setAttribute("viewBox", `${parts[0]} ${parts[1]} ${parts[2]} ${parts[3] + extra}`);
+      if (!selectedPersonId) {
+        panel.hidden = false;
+        panelTitle.textContent = "Selected details";
+        panelContent.innerHTML = `<div class="ft-selected-cell"><span class="ft-selected-value">Select a person box to view details.</span></div>`;
+        return;
+      }
+      const person = personById(selectedPersonId);
+      const applicant = applicantByPersonId(selectedPersonId);
+      if (!person && !applicant) {
+        panel.hidden = false;
+        panelTitle.textContent = "Selected details";
+        panelContent.innerHTML = `<div class="ft-selected-cell"><span class="ft-selected-value">Details not found for this box.</span></div>`;
+        return;
+      }
+      const cells = [
+        selectedCell("Name", person?.name),
+        selectedCell("Current EPIC", person?.epic_number),
+        selectedCell("Phone", applicant?.phone_number),
+        selectedCell("Aadhaar", applicant?.aadhaar_number ? formatAadhaar(applicant.aadhaar_number) : ""),
+        selectedCell("Date of Birth", applicant?.date_of_birth ? dmy(applicant.date_of_birth) : ""),
+        selectedCell("State / District", [person?.state_2002, person?.district_2002].filter(Boolean).join(", ")),
+        selectedCell("AC / Part / Serial", [person?.ac_no_2002 ? `AC: ${person.ac_no_2002}` : "", person?.part_no_2002 ? `Part: ${person.part_no_2002}` : "", person?.sl_no_2002 ? `Serial: ${person.sl_no_2002}` : ""].filter(Boolean).join(", ")),
+        selectedCell("2002 Name", person?.name_as_per_2002),
+        selectedCell("2002 EPIC", person?.epic_number_2002),
+        selectedCell("Relative", person?.relative_name_2002)
+      ].join("");
+      panel.hidden = false;
+      panelTitle.textContent = person?.name || "Selected details";
+      panelContent.innerHTML = cells || `<div class="ft-selected-cell"><span class="ft-selected-value">No details available.</span></div>`;
     }
 
     function enhanceTree() {
@@ -124,16 +146,13 @@
       try {
         const svg = canvas?.querySelector("svg.family-tree-svg");
         if (!svg) return;
-        const showDetails = showDetailsInput?.checked;
-        setSvgExtraHeight(svg, showDetails);
         svg.querySelectorAll(".ft-person").forEach(nodeEl => {
-          nodeEl.querySelectorAll("[data-ft-extra],.ft-action,[data-ft-name-line],[data-ft-epic-line]").forEach(el => el.remove());
-
+          nodeEl.querySelectorAll("[data-ft-name-line],[data-ft-epic-line],.ft-action").forEach(el => el.remove());
           const rect = nodeEl.querySelector(".ft-box");
-          if (rect) rect.setAttribute("height", showDetails ? String(DETAIL_BOX_H) : String(NORMAL_BOX_H));
-
+          if (rect) rect.setAttribute("height", "90");
           const originalName = nodeEl.querySelector(".ft-name:not([data-ft-name-line])");
           if (originalName) originalName.style.display = "none";
+          nodeEl.querySelectorAll(".ft-meta:not([data-ft-epic-line])").forEach(el => { el.style.display = "none"; });
 
           const personId = nodeEl.getAttribute("data-node-id") || "";
           const person = personById(personId);
@@ -143,42 +162,24 @@
           const epic = person?.epic_number || parsed.epic || "";
           const nameX = Number(originalName?.getAttribute("x")) || 14;
 
-          nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-name" data-ft-name-line="1" x="${nameX}" y="20">${esc(trunc(name, 25))}</text>`);
-          if (epic) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-epic-line="1" x="${nameX}" y="36">${esc(trunc(epic, 28))}</text>`);
-
-          const metaLines = Array.from(nodeEl.querySelectorAll(".ft-meta:not([data-ft-epic-line])"));
-          metaLines.forEach((line, index) => {
-            line.style.display = showDetails ? "" : "none";
-            line.setAttribute("x", "14");
-            line.setAttribute("y", String(88 + index * 12));
-          });
+          nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-name" data-ft-name-line="1" x="${nameX}" y="22">${esc(trunc(name, 24))}</text>`);
+          if (epic) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-epic-line="1" x="${nameX}" y="40">${esc(trunc(epic, 28))}</text>`);
 
           let actions = "";
           if (applicant) actions += actionIcon("applicant", 204, "Edit applicant details", "✎");
           if (person) actions += actionIcon("person", 227, "Edit people details", "▤");
           if (actions) nodeEl.insertAdjacentHTML("beforeend", actions);
-
-          if (!showDetails) return;
-          const details = [];
-          if (applicant?.phone_number) details.push(detailLine("phone", 50, applicant.phone_number, 26));
-          if (applicant?.aadhaar_number) details.push(detailLine("file", 63, formatAadhaar(applicant.aadhaar_number), 26));
-          if (applicant?.date_of_birth) details.push(detailLine("calendar", 76, dmy(applicant.date_of_birth), 26));
-          if (!applicant && !metaLines.length && person) {
-            if (person.state_2002 || person.district_2002) details.push(plainDetail(50, [person.state_2002, person.district_2002].filter(Boolean).join(", ")));
-            const acLine = [person.ac_no_2002 ? `AC: ${person.ac_no_2002}` : "", person.part_no_2002 ? `Part: ${person.part_no_2002}` : "", person.sl_no_2002 ? `Serial: ${person.sl_no_2002}` : ""].filter(Boolean).join(", ");
-            if (acLine) details.push(plainDetail(63, acLine));
-          }
-          if (details.length) nodeEl.insertAdjacentHTML("beforeend", details.join(""));
         });
       } finally {
         enhancing = false;
       }
+      renderSelectedPanel();
     }
 
-    showDetailsInput.checked = localStorage.getItem(DETAIL_KEY) === "1";
-    showDetailsInput.addEventListener("change", () => {
-      localStorage.setItem(DETAIL_KEY, showDetailsInput.checked ? "1" : "0");
-      enhanceTree();
+    panelButton.addEventListener("click", () => {
+      panelEnabled = !panelEnabled;
+      localStorage.setItem(PANEL_KEY, panelEnabled ? "1" : "0");
+      renderSelectedPanel();
     });
 
     document.getElementById("ftAddApplicant")?.addEventListener("click", () => {
@@ -187,31 +188,40 @@
 
     canvas?.addEventListener("click", event => {
       const action = event.target.closest?.(".ft-action");
-      if (!action) return;
-      event.preventDefault();
-      event.stopPropagation();
-      event.stopImmediatePropagation();
-      const personGroup = action.closest(".ft-person");
-      const personId = personGroup?.getAttribute("data-node-id") || "";
-      const kind = action.getAttribute("data-ft-action");
-      if (kind === "person") {
-        if (!personById(personId)) return alert("People record not found for this box.");
-        openPersonPopup({ personId, state, commit }).catch(error => alert(error.message || "Could not open People popup."));
+      if (action) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        const personGroup = action.closest(".ft-person");
+        const personId = personGroup?.getAttribute("data-node-id") || "";
+        const kind = action.getAttribute("data-ft-action");
+        if (kind === "person") {
+          if (!personById(personId)) return alert("People record not found for this box.");
+          openPersonPopup({ personId, state, commit }).catch(error => alert(error.message || "Could not open People popup."));
+        }
+        if (kind === "applicant") {
+          const applicant = applicantByPersonId(personId);
+          if (!applicant) return alert("Applicant record not found for this box.");
+          openApplicantPopup(applicant.applicant_id).catch(error => alert(error.message || "Could not open Applicant popup."));
+        }
+        return;
       }
-      if (kind === "applicant") {
-        const applicant = applicantByPersonId(personId);
-        if (!applicant) return alert("Applicant record not found for this box.");
-        openApplicantPopup(applicant.applicant_id).catch(error => alert(error.message || "Could not open Applicant popup."));
-      }
+
+      const personGroup = event.target.closest?.(".ft-person");
+      if (!personGroup) return;
+      selectedPersonId = personGroup.getAttribute("data-node-id") || "";
+      panelEnabled = true;
+      localStorage.setItem(PANEL_KEY, "1");
+      setTimeout(renderSelectedPanel, 0);
     }, true);
 
     document.addEventListener("sir:data-changed", () => {
-      if (document.querySelector(".native-applicant-popup")) return;
-      setTimeout(() => window.location.reload(), 120);
+      setTimeout(() => window.location.reload(), 160);
     });
 
     new MutationObserver(() => enhanceTree()).observe(canvas, { childList: true });
     setTimeout(enhanceTree, 100);
+    renderSelectedPanel();
   </script>
 </body>
 </html>
