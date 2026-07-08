@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=26-07-08-09">
-  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-09">
-  <link rel="stylesheet" href="family-tree.css?v=26-07-08-09">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-11">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-11">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-11">
 </head>
 <body>
   <header class="app-header">
@@ -55,13 +55,11 @@
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="modalRoot"></div>
-  <script type="module" src="app.js?v=26-07-08-09"></script>
+  <script type="module" src="app.js?v=26-07-08-11"></script>
   <script type="module">
-    import "./family-tree.js?v=26-07-08-09";
+    import "./family-tree.js?v=26-07-08-11";
     import { loadState } from "./storage.js";
     import { formatAadhaar } from "./core.js";
-    import { openPersonPopup } from "./popups/person-popup.js?v=26-07-08-09";
-    import { openApplicantPopup } from "./popups/applicant-popup.js?v=26-07-08-09";
 
     const PANEL_KEY = "sir_family_tree_selected_panel";
     const state = loadState();
@@ -103,8 +101,8 @@
         person?.sl_no_2002 ? `Serial: ${person.sl_no_2002}` : ""
       ].filter(Boolean).join(", ");
     }
-    function actionIcon(action, x, label, symbol) {
-      return `<g class="ft-action" data-ft-action="${action}" tabindex="0" role="button" aria-label="${esc(label)}"><title>${esc(label)}</title><rect class="ft-action-bg" x="${x}" y="6" width="19" height="19" rx="5"></rect><text class="ft-action-symbol" x="${x + 9.5}" y="20" text-anchor="middle">${esc(symbol)}</text></g>`;
+    function actionIcon(action, x, label, symbol, dataAttr) {
+      return `<g class="ft-action" data-ft-action="${action}" ${dataAttr} tabindex="0" role="button" aria-label="${esc(label)}"><title>${esc(label)}</title><rect class="ft-action-bg" x="${x}" y="6" width="19" height="19" rx="5"></rect><text class="ft-action-symbol" x="${x + 9.5}" y="20" text-anchor="middle">${esc(symbol)}</text></g>`;
     }
     function selectedCell(label, value) {
       const text = String(value || "").trim();
@@ -162,8 +160,8 @@
           if (sd) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-2002-line="1" x="${nameX}" y="54">${esc(trunc(sd, 32))}</text>`);
           if (aps) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-2002-line="1" x="${nameX}" y="70">${esc(trunc(aps, 36))}</text>`);
           let actions = "";
-          if (applicant) actions += actionIcon("applicant", 204, "Edit applicant details", "✎");
-          if (person) actions += actionIcon("person", 227, "Edit people details", "▤");
+          if (applicant) actions += actionIcon("applicant", 204, "Edit applicant details", "✎", `data-edit-applicant="${esc(applicant.applicant_id)}"`);
+          if (person) actions += actionIcon("person", 227, "Edit people details", "▤", `data-edit-person="${esc(person.person_id)}"`);
           if (actions) nodeEl.insertAdjacentHTML("beforeend", actions);
         });
       } finally { enhancing = false; }
@@ -175,21 +173,8 @@
       localStorage.setItem(PANEL_KEY, panelEnabled ? "1" : "0");
       renderSelectedPanel();
     });
-    document.getElementById("ftAddApplicant")?.addEventListener("click", () => openApplicantPopup("").catch(error => alert(error.message || "Could not open Applicant popup.")));
     canvas?.addEventListener("click", event => {
-      const action = event.target.closest?.(".ft-action");
-      if (action) {
-        event.preventDefault(); event.stopPropagation(); event.stopImmediatePropagation();
-        const personGroup = action.closest(".ft-person");
-        const personId = personGroup?.getAttribute("data-node-id") || "";
-        const kind = action.getAttribute("data-ft-action");
-        if (kind === "person") return openPersonPopup({ personId }).catch(error => alert(error.message || "Could not open People popup."));
-        if (kind === "applicant") {
-          const applicant = applicantByPersonId(personId);
-          if (!applicant) return alert("Applicant record not found for this box.");
-          return openApplicantPopup(applicant.applicant_id).catch(error => alert(error.message || "Could not open Applicant popup."));
-        }
-      }
+      if (event.target.closest?.(".ft-action")) return;
       const personGroup = event.target.closest?.(".ft-person");
       if (!personGroup) return;
       selectedPersonId = personGroup.getAttribute("data-node-id") || "";
