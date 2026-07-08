@@ -1,6 +1,6 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-08-07";
-import { openPhotoPopup } from "./photo-popup.js?v=26-07-08-07";
+import { openPersonPopup } from "./person-popup.js?v=26-07-08-08";
+import { openPhotoPopup } from "./photo-popup.js?v=26-07-08-08";
 
 const ADD_NEW = "__add_new__";
 const DOB_MAX = "2009-12-31";
@@ -12,7 +12,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-08-07");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-08-08");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
