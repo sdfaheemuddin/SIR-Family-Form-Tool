@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=26-07-08-11">
-  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-11">
-  <link rel="stylesheet" href="family-tree.css?v=26-07-08-11">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-12">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-12">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-12">
 </head>
 <body>
   <header class="app-header">
@@ -57,7 +57,7 @@
   <div id="modalRoot"></div>
   <script type="module" src="app.js?v=26-07-08-11"></script>
   <script type="module">
-    import "./family-tree.js?v=26-07-08-11";
+    import "./family-tree.js?v=26-07-08-12";
     import { loadState } from "./storage.js";
     import { formatAadhaar } from "./core.js";
 
@@ -182,7 +182,10 @@
       localStorage.setItem(PANEL_KEY, "1");
       setTimeout(renderSelectedPanel, 0);
     }, true);
-    document.addEventListener("sir:data-changed", () => setTimeout(() => window.location.reload(), 160));
+    document.addEventListener("sir:data-changed", () => {
+      if (document.querySelector(".native-applicant-popup,.native-person-popup")) return;
+      setTimeout(() => window.location.reload(), 160);
+    });
     new MutationObserver(() => enhanceTree()).observe(canvas, { childList: true });
     setTimeout(enhanceTree, 100);
     renderSelectedPanel();
