@@ -1,4 +1,4 @@
-const CACHE_NAME = "sir-family-forms-v26-07-08-06";
+const CACHE_NAME = "sir-family-forms-v26-07-08-07";
 const BASE_URL = new URL("./", self.location);
 const INDEX_URL = new URL("./index.html", self.location).href;
 
