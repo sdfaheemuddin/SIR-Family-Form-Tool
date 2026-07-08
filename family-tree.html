@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="family-tree.css">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-02">
 </head>
 <body>
   <div class="ft-toolbar" role="toolbar" aria-label="Family Tree tools">
@@ -28,7 +28,37 @@
   </main>
 
   <div id="ftToast" role="status" aria-live="polite"></div>
-
-  <script type="module" src="family-tree.js"></script>
+  <script>
+    function fitFamilyTreeToWindow() {
+      const wrap = document.querySelector(".ft-canvas-wrap");
+      const svg = document.querySelector("svg.family-tree-svg");
+      if (!wrap || !svg) return;
+  
+      const vb = svg.viewBox?.baseVal;
+      const svgWidth = vb?.width || Number(svg.getAttribute("width")) || svg.getBoundingClientRect().width;
+      const svgHeight = vb?.height || Number(svg.getAttribute("height")) || svg.getBoundingClientRect().height;
+  
+      if (!svgWidth || !svgHeight) return;
+  
+      const availableWidth = Math.max(260, wrap.clientWidth - 24);
+      const availableHeight = Math.max(260, wrap.clientHeight - 24);
+  
+      const fitZoom = Math.min(1, availableWidth / svgWidth, availableHeight / svgHeight);
+  
+      svg.style.transform = `scale(${fitZoom})`;
+      svg.style.transformOrigin = "top left";
+  
+      wrap.scrollLeft = 0;
+      wrap.scrollTop = 0;
+    }
+  
+    document.addEventListener("click", event => {
+      if (event.target?.id !== "ftZoomFit") return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setTimeout(fitFamilyTreeToWindow, 0);
+    }, true);
+  </script>
+  <script type="module" src="family-tree.js?v=26-07-08-02"></script>
 </body>
 </html>
