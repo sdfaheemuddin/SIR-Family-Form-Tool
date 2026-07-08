@@ -107,6 +107,52 @@ html, body {
   margin: 0;
 }
 
+.ft-selected-panel {
+  margin: .75rem .75rem 0;
+  padding: .8rem;
+  background: #fff;
+  border: 1px solid var(--ft-line);
+  border-radius: 12px;
+  box-shadow: 0 8px 18px rgba(23, 34, 29, .06);
+}
+
+.ft-selected-panel[hidden] { display: none; }
+
+.ft-selected-panel h3 {
+  margin: 0 0 .55rem;
+  color: var(--ft-green);
+  font-size: 1rem;
+}
+
+.ft-selected-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: .5rem;
+}
+
+.ft-selected-cell {
+  border: 1px solid var(--ft-line);
+  border-radius: 10px;
+  padding: .5rem .6rem;
+  background: var(--ft-bg);
+}
+
+.ft-selected-label {
+  display: block;
+  color: var(--ft-muted);
+  font-size: .72rem;
+  font-weight: 800;
+  margin-bottom: .18rem;
+}
+
+.ft-selected-value {
+  display: block;
+  color: var(--ft-text);
+  font-size: .9rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
 .ft-canvas-wrap {
   overflow: auto;
   padding: .75rem;
