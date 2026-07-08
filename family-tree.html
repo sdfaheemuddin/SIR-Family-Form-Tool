@@ -187,6 +187,7 @@
     }, true);
 
     document.addEventListener("sir:data-changed", () => {
+      if (document.querySelector(".native-applicant-popup")) return;
       setTimeout(() => window.location.reload(), 120);
     });
 
