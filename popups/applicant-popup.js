@@ -1,6 +1,6 @@
 import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-08-08";
-import { openPhotoPopup } from "./photo-popup.js?v=26-07-08-08";
+import { openPersonPopup } from "./person-popup.js?v=26-07-08-11";
+import { openPhotoPopup } from "./photo-popup.js?v=26-07-08-11";
 
 const ADD_NEW = "__add_new__";
 const DOB_MAX = "2009-12-31";
@@ -12,7 +12,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-08-08");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-08-11");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
@@ -152,6 +152,7 @@ async function applyPhotoEdit(source, form, setPhoto) {
 }
 
 export async function openApplicantPopup(applicantId = "") {
+  if (!stateRef || !commitRef) throw new Error("Applicant popup is not initialized.");
   const existing = stateRef.applicants.find(a => a.applicant_id === applicantId);
   const draft = existing ? { ...existing } : blankApplicant();
   const shell = openShell(existing ? "Edit Applicant" : "Add Applicant");
@@ -217,7 +218,7 @@ export function initApplicantPopupOverrides(state, commit) {
   stateRef = state;
   commitRef = commit;
   document.addEventListener("click", event => {
-    const addButton = event.target.closest("#addApplicantBtn,#readonlyNewApplicantBtn");
+    const addButton = event.target.closest("#addApplicantBtn,#readonlyNewApplicantBtn,#ftAddApplicant");
     const editButton = event.target.closest("[data-edit-applicant],#readonlyEditApplicantBtn");
     if (!addButton && !editButton) return;
     event.preventDefault();
