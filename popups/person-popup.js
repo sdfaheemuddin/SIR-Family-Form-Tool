@@ -79,6 +79,7 @@ export async function openPersonPopup(options = {}) {
   if (!activeState || !activeCommit) throw new Error("People popup is not initialized.");
 
   const fromMapper = Boolean(options.fromMapper);
+  const fromApplicant = Boolean(options.fromApplicant);
   const onSaved = typeof options.onSaved === "function" ? options.onSaved : null;
   const existing = activeState.people.find(p => p.person_id === personId);
   const draft = existing ? { ...existing } : blankPerson();
@@ -87,6 +88,38 @@ export async function openPersonPopup(options = {}) {
   const form = modal.querySelector("form");
   const errorBox = form.querySelector("[data-error]");
   const overrideRule = form.querySelector("[data-override-rule]");
+  const epicLabel = form.querySelector("[data-epic-label]");
+  const nameWarning = form.querySelector("[data-name-warning]");
+
+  const normalizeNameKey = value => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const syncDuplicateNameWarning = () => {
+    if (!nameWarning) return;
+    if (existing) {
+      nameWarning.hidden = true;
+      nameWarning.textContent = "";
+      return;
+    }
+    const nameKey = normalizeNameKey(form.elements.name.value);
+    if (!nameKey) {
+      nameWarning.hidden = true;
+      nameWarning.textContent = "";
+      return;
+    }
+    const duplicate = activeState.people.find(person => normalizeNameKey(person.name) === nameKey);
+    if (!duplicate) {
+      nameWarning.hidden = true;
+      nameWarning.textContent = "";
+      return;
+    }
+    const epicPart = duplicate.epic_number ? ` (EPIC: ${duplicate.epic_number})` : "";
+    nameWarning.hidden = false;
+    nameWarning.textContent = `Warning: A person with this name already exists: ${duplicate.name}${epicPart}. Please verify before saving.`;
+  };
+
+  form.elements.epic_number.required = fromApplicant;
+  if (epicLabel) {
+    epicLabel.classList.toggle("required", fromApplicant);
+  }
 
   Object.entries(draft).forEach(([key, value]) => setField(form, key, value));
   if (draft.allow_nonstandard_epic) overrideRule.hidden = false;
@@ -99,16 +132,18 @@ export async function openPersonPopup(options = {}) {
   form.elements.epic_number.addEventListener("input", () => {
     form.elements.epic_number.value = normalizeEpic(form.elements.epic_number.value);
   });
+  form.elements.name.addEventListener("input", syncDuplicateNameWarning);
   form.elements.epic_number_2002.addEventListener("input", () => {
     form.elements.epic_number_2002.value = normalizeEpic(form.elements.epic_number_2002.value);
   });
   form.elements.is_2002_available.addEventListener("change", () => sync2002(form));
   form.querySelector("[data-cancel]").addEventListener("click", () => modal.remove());
+  syncDuplicateNameWarning();
 
   form.addEventListener("submit", event => {
     event.preventDefault();
     const person = readPerson(form, draft);
-    const errors = validatePerson(person, { requireEpic: false, people: activeState.people, editingId: person.person_id });
+    const errors = validatePerson(person, { requireEpic: fromApplicant, people: activeState.people, editingId: person.person_id });
     if (hasEpicValidationError(errors) && !person.allow_nonstandard_epic) overrideRule.hidden = false;
     errorBox.style.display = errors.length ? "block" : "none";
     errorBox.textContent = errors.join("\n");

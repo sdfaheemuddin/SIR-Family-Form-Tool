@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2380 794" width="2380" height="794" class="family-tree-svg" style="transform-origin: left top;"><style>
+  .ft-box { fill:#f2faf6; stroke:#195b45; stroke-width:1.6; }
+  .ft-box-placeholder { stroke-dasharray:4 3; }
+  .ft-name { font:700 13.5px system-ui, sans-serif; fill:#17221d; }
+  .ft-meta { font:400 12px system-ui, sans-serif; fill:#45524c; }
+  .ft-title { font:700 16px system-ui, sans-serif; fill:#195b45; }
+  .ft-line { stroke:#195b45; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; fill:none; }
+  .ft-parent-line { stroke:#195b45; }
+  .ft-spouse-line { stroke:#195b45; }
+  .ft-mapper-line { stroke:#65736d; stroke-width:1.4; stroke-dasharray:6 4; }
+  .ft-mapper-label rect { fill:#ffffff; stroke:#dce8e2; }
+  .ft-mapper-label text { font:600 10.5px system-ui, sans-serif; fill:#45524c; }
+</style>
+  <g class="ft-connectors"><line class="ft-line ft-spouse-line" x1="300" y1="509" x2="316" y2="509"/>
+<line class="ft-line ft-spouse-line" x1="300" y1="699" x2="316" y2="699"/>
+<line class="ft-line ft-spouse-line" x1="300" y1="129" x2="316" y2="129"/>
+<line class="ft-line ft-spouse-line" x1="888" y1="319" x2="904" y2="319"/>
+<line class="ft-line ft-spouse-line" x1="1476" y1="129" x2="1492" y2="129"/>
+<line class="ft-line ft-spouse-line" x1="2064" y1="129" x2="2080" y2="129"/>
+<path class="ft-line ft-parent-line" d="M 308 174 L 308 200 L 175 200 L 175 464" fill="none"/>
+<path class="ft-line ft-parent-line" d="M 1484 174 L 1484 208 L 1029 208 L 1029 274" fill="none"/>
+<path class="ft-line ft-parent-line" d="M 2072 174 L 2072 216 L 441 216 L 441 654" fill="none"/>
+<path class="ft-line ft-parent-line" d="M 896 364 L 896 390 L 441 390 L 441 464" fill="none"/>
+<path class="ft-line ft-parent-line" d="M 308 554 L 308 580 L 175 580 L 175 654" fill="none"/>
+<path class="ft-line ft-mapper-line" d="M 175 654 C 175 584, 441 244, 441 174" fill="none"/>
+
+        <g class="ft-mapper-label">
+          <rect x="265.7" y="404" width="84.6" height="18" rx="4"/>
+          <text x="308" y="417" text-anchor="middle">Grandmother</text>
+        </g></g>
+  <g class="ft-titles"><text class="ft-title" x="1190" y="72" text-anchor="middle">Family Tree</text></g>
+  <g class="ft-people"><g transform="translate(50, 84)">
+    <g class="ft-person" data-node-id="person_mrazncmr_u3cp2z">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#2563EB">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Syed Khaja Moinuddin</text>
+    </g></g>
+<g transform="translate(316, 84)">
+    <g class="ft-person" data-node-id="person_mrazgv9c_eun87u">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#DB2777">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Khairunnisa Begum</text>
+      <text class="ft-meta" x="14" y="44">Telangana, Hyderabad</text>
+      <text class="ft-meta" x="14" y="62">AC: 210, Part: 194, Serial: 519</text>
+    </g></g>
+<g transform="translate(50, 464)">
+    <g class="ft-person" data-node-id="person_mraziprh_mtkc5q">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#2563EB">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Syed Nayeemuddin (FYY1234567)</text>
+    </g></g>
+<g transform="translate(316, 464)">
+    <g class="ft-person" data-node-id="person_mrazj0kj_zwxewp">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#DB2777">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Zakera Begum (SWD2345678)</text>
+    </g></g>
+<g transform="translate(50, 654)">
+    <g class="ft-person" data-node-id="person_mrazgenm_ik64ci">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+      <text class="ft-name" x="14" y="26">Syed Faheemuddin (SWD1234567)</text>
+    </g></g>
+<g transform="translate(316, 654)">
+    <g class="ft-person" data-node-id="person_mrazjb4p_mqlhx4">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+      <text class="ft-name" x="14" y="26">Maheen Begum (SWD9876543)</text>
+      <text class="ft-meta" x="14" y="44">Telangana, Hyderabad</text>
+      <text class="ft-meta" x="14" y="62">AC: 210, Part: 194, Serial: 1</text>
+    </g></g>
+<g transform="translate(638, 274)">
+    <g class="ft-person" data-node-id="person_mrazoecb_sa170o">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#2563EB">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Sofi Ahmed</text>
+      <text class="ft-meta" x="14" y="44">Telangana, Medak</text>
+      <text class="ft-meta" x="14" y="62">AC: 225, Part: 194, Serial: 1</text>
+    </g></g>
+<g transform="translate(904, 274)">
+    <g class="ft-person" data-node-id="person_mrazpufd_ldk0sf">
+      <rect class="ft-box" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#DB2777">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Tahera Begum (SWD7896523)</text>
+      <text class="ft-meta" x="14" y="44">Telangana, Zahirabad</text>
+      <text class="ft-meta" x="14" y="62">AC: 225, Part: 194, Serial: 1</text>
+    </g></g>
+<g transform="translate(1226, 84)">
+    <g class="ft-person" data-node-id="person_mraztbrr_uripy5_1">
+      <rect class="ft-box ft-box-placeholder" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#2563EB">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Father</text>
+    </g></g>
+<g transform="translate(1492, 84)">
+    <g class="ft-person" data-node-id="person_mraztjk2_9lwttp_1">
+      <rect class="ft-box ft-box-placeholder" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#DB2777">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Mother</text>
+    </g></g>
+<g transform="translate(1814, 84)">
+    <g class="ft-person" data-node-id="person_mrazudrj_uq9xl4_1">
+      <rect class="ft-box ft-box-placeholder" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#2563EB">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Mapper</text>
+      <text class="ft-meta" x="14" y="44">Telangana, Hyderabad</text>
+      <text class="ft-meta" x="14" y="62">AC: 1, Part: 1, Serial: 1</text>
+    </g></g>
+<g transform="translate(2080, 84)">
+    <g class="ft-person" data-node-id="person_mraztjk2_9lwttp_2">
+      <rect class="ft-box ft-box-placeholder" width="250" height="90" rx="10" ry="10"/>
+      
+    <g transform="translate(14, 14) scale(0.8235294117647058)" fill="#DB2777">
+      <circle cx="7" cy="6" r="4.3"/>
+      <path d="M0.5 17 C0.5 11.3 3.3 8.7 7 8.7 C10.7 8.7 13.5 11.3 13.5 17 Z"/>
+    </g>
+      <text class="ft-name" x="34" y="26">Mother</text>
+    </g></g></g>
+</svg>

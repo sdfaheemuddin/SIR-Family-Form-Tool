@@ -1,0 +1,249 @@
+/* Family Tree page shell styles. Kept separate from styles.css so the
+   Family Tree feature stays isolated from the rest of the app. */
+
+:root {
+  --ft-green: #195b45;
+  --ft-green2: #23765c;
+  --ft-bg: #f6fbf8;
+  --ft-card: #ffffff;
+  --ft-line: #dce8e2;
+  --ft-text: #17221d;
+  --ft-muted: #65736d;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--ft-bg);
+  color: var(--ft-text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.ft-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: linear-gradient(135deg, var(--ft-green), var(--ft-green2));
+  color: #fff;
+}
+
+.ft-header h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.ft-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  background: rgba(255, 255, 255, .16);
+  border-radius: 10px;
+  padding: .5rem .75rem;
+}
+
+.ft-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  align-items: center;
+  padding: .75rem 1rem;
+  background: var(--ft-card);
+  border-bottom: 1px solid var(--ft-line);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.ft-toolbar button {
+  border: 0;
+  border-radius: 10px;
+  background: var(--ft-green);
+  color: #fff;
+  padding: .55rem .8rem;
+  font-weight: 700;
+  min-height: 36px;
+  cursor: pointer;
+}
+
+.ft-toolbar button.secondary {
+  background: var(--ft-bg);
+  color: var(--ft-green);
+  border: 1px solid var(--ft-line);
+}
+
+.ft-toolbar .ft-zoom-group {
+  display: flex;
+  gap: .25rem;
+  margin-left: auto;
+}
+
+.ft-toolbar .ft-zoom-group button {
+  min-width: 40px;
+  padding: .5rem;
+}
+
+.ft-canvas-wrap {
+  overflow: auto;
+  padding: .75rem;
+  min-height: calc(100vh - 76px);
+}
+
+#familyTreeCanvas {
+  display: inline-block;
+}
+
+.family-tree-svg {
+  display: block;
+  background: #fff;
+  border: 1px solid var(--ft-line);
+  border-radius: 12px;
+}
+
+.ft-box {
+  fill: #f2faf6;
+  stroke: #195b45;
+  stroke-width: 1.6;
+}
+
+.ft-box-non-applicant {
+  fill: #eef1f3;
+  stroke: #5f6b67;
+}
+
+.ft-box-placeholder {
+  stroke-dasharray: 4 3;
+}
+
+.ft-name {
+  font: 700 13.5px system-ui, sans-serif;
+  fill: #17221d;
+}
+
+.ft-meta {
+  font: 400 12px system-ui, sans-serif;
+  fill: #45524c;
+}
+
+.ft-title {
+  font: 700 16px system-ui, sans-serif;
+  fill: #195b45;
+}
+
+.ft-line {
+  stroke: #195b45;
+  stroke-width: 1.6;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ft-parent-line {
+  stroke: #195b45;
+}
+
+.ft-spouse-line {
+  stroke: #195b45;
+}
+
+.ft-mapper-line {
+  stroke: #334155;
+  stroke-width: 1.8;
+  stroke-dasharray: 7 4;
+}
+
+.ft-mapper-label rect {
+  fill: #ffffff;
+  stroke: #dce8e2;
+}
+
+.ft-mapper-label text {
+  font: 600 10.5px system-ui, sans-serif;
+  fill: #45524c;
+}
+
+.ft-person {
+  cursor: pointer;
+}
+
+.ft-person.is-selected .ft-box {
+  fill: #eaf3ff;
+  stroke: #1d4ed8;
+  stroke-width: 2.6;
+}
+
+.ft-person.is-parent .ft-box {
+  fill: #dcfce7;
+  stroke: #15803d;
+  stroke-width: 3.2;
+}
+
+.ft-person.is-parent .ft-name,
+.ft-person.is-parent .ft-meta {
+  fill: #14532d;
+}
+
+.ft-person.is-mapper .ft-box {
+  fill: #fae8ff;
+  stroke: #a21caf;
+  stroke-width: 3.2;
+}
+
+.ft-person.is-mapper .ft-name,
+.ft-person.is-mapper .ft-meta {
+  fill: #701a75;
+}
+
+.ft-parent-line.is-highlight-parent {
+  stroke: #15803d;
+  stroke-width: 3.8;
+}
+
+.ft-mapper-line.is-highlight-mapper {
+  stroke: #a21caf;
+  stroke-width: 3.2;
+  stroke-dasharray: 6 3;
+}
+
+.ft-mapper-label.is-highlight-mapper-label rect {
+  fill: #fae8ff;
+  stroke: #a21caf;
+  stroke-width: 1.6;
+}
+
+.ft-mapper-label.is-highlight-mapper-label text {
+  fill: #701a75;
+  font-weight: 700;
+}
+
+.ft-empty {
+  color: var(--ft-muted);
+  font-size: .95rem;
+  max-width: 40rem;
+}
+
+#ftToast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.25rem;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--ft-text);
+  color: #fff;
+  padding: .6rem .9rem;
+  border-radius: 10px;
+  font-size: .9rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+}
+
+#ftToast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}

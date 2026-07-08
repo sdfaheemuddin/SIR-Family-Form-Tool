@@ -1,9 +1,34 @@
-<section class="panel full" id="familyTreeSection">
-  <div class="section-head"><h2>Family Tree</h2></div>
-  <div class="tree-note">Showing all applicants and their connected family/mapping relationships.</div>
-  <div class="tree-export-actions">
-    <button id="exportFamilyTreeImageBtn" type="button" class="secondary">Export Image</button>
-    <button id="exportFamilyTreePdfBtn" type="button" class="secondary">Export PDF</button>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Family Tree — SIR Family Forms</title>
+  <meta name="theme-color" content="#195b45">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.png">
+  <link rel="stylesheet" href="family-tree.css">
+</head>
+<body>
+  <div class="ft-toolbar" role="toolbar" aria-label="Family Tree tools">
+    <button id="ftExportSvg" type="button">Export SVG</button>
+    <button id="ftExportPng" type="button">Export Image</button>
+    <button id="ftExportPdf" type="button" class="secondary">Export PDF</button>
+    <button id="ftCopyScript" type="button" class="secondary">Copy FamilyScript</button>
+    <button id="ftDownloadScript" type="button" class="secondary">Download FamilyScript</button>
+    <div class="ft-zoom-group" aria-label="Zoom controls">
+      <button id="ftZoomOut" type="button" class="secondary" aria-label="Zoom out">&minus;</button>
+      <button id="ftZoomFit" type="button" class="secondary" aria-label="Fit">Fit</button>
+      <button id="ftZoomIn" type="button" class="secondary" aria-label="Zoom in">&plus;</button>
+    </div>
   </div>
-  <div id="familyTreeWrap"></div>
-</section>
+
+  <main class="ft-canvas-wrap">
+    <div id="familyTreeCanvas" aria-live="polite"></div>
+  </main>
+
+  <div id="ftToast" role="status" aria-live="polite"></div>
+
+  <script type="module" src="family-tree.js"></script>
+</body>
+</html>
