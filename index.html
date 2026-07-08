@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=26-07-08-08">
-  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-08">
-  <link rel="stylesheet" href="family-tree.css?v=26-07-08-08">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-09">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-09">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-09">
 </head>
 <body>
   <header class="app-header">
@@ -55,13 +55,13 @@
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="modalRoot"></div>
-  <script type="module" src="app.js?v=26-07-08-08"></script>
+  <script type="module" src="app.js?v=26-07-08-09"></script>
   <script type="module">
-    import "./family-tree.js?v=26-07-08-08";
+    import "./family-tree.js?v=26-07-08-09";
     import { loadState } from "./storage.js";
     import { formatAadhaar } from "./core.js";
-    import { openPersonPopup } from "./popups/person-popup.js?v=26-07-08-08";
-    import { openApplicantPopup } from "./popups/applicant-popup.js?v=26-07-08-08";
+    import { openPersonPopup } from "./popups/person-popup.js?v=26-07-08-09";
+    import { openApplicantPopup } from "./popups/applicant-popup.js?v=26-07-08-09";
 
     const PANEL_KEY = "sir_family_tree_selected_panel";
     const state = loadState();
@@ -93,6 +93,16 @@
       if (!match) return { name: raw, epic: "" };
       return { name: match[1].trim(), epic: match[2].trim() };
     }
+    function stateDistrict(person) {
+      return [person?.state_2002, person?.district_2002].filter(Boolean).join(", ");
+    }
+    function acPartSerial(person) {
+      return [
+        person?.ac_no_2002 ? `AC: ${person.ac_no_2002}` : "",
+        person?.part_no_2002 ? `Part: ${person.part_no_2002}` : "",
+        person?.sl_no_2002 ? `Serial: ${person.sl_no_2002}` : ""
+      ].filter(Boolean).join(", ");
+    }
     function actionIcon(action, x, label, symbol) {
       return `<g class="ft-action" data-ft-action="${action}" tabindex="0" role="button" aria-label="${esc(label)}"><title>${esc(label)}</title><rect class="ft-action-bg" x="${x}" y="6" width="19" height="19" rx="5"></rect><text class="ft-action-symbol" x="${x + 9.5}" y="20" text-anchor="middle">${esc(symbol)}</text></g>`;
     }
@@ -118,8 +128,8 @@
         selectedCell("Phone", applicant?.phone_number),
         selectedCell("Aadhaar", applicant?.aadhaar_number ? formatAadhaar(applicant.aadhaar_number) : ""),
         selectedCell("Date of Birth", applicant?.date_of_birth ? dmy(applicant.date_of_birth) : ""),
-        selectedCell("State / District", [person?.state_2002, person?.district_2002].filter(Boolean).join(", ")),
-        selectedCell("AC / Part / Serial", [person?.ac_no_2002 ? `AC: ${person.ac_no_2002}` : "", person?.part_no_2002 ? `Part: ${person.part_no_2002}` : "", person?.sl_no_2002 ? `Serial: ${person.sl_no_2002}` : ""].filter(Boolean).join(", ")),
+        selectedCell("State / District", stateDistrict(person)),
+        selectedCell("AC / Part / Serial", acPartSerial(person)),
         selectedCell("2002 Name", person?.name_as_per_2002),
         selectedCell("2002 EPIC", person?.epic_number_2002),
         selectedCell("Relative", person?.relative_name_2002)
@@ -134,7 +144,7 @@
         const svg = canvas?.querySelector("svg.family-tree-svg");
         if (!svg) return;
         svg.querySelectorAll(".ft-person").forEach(nodeEl => {
-          nodeEl.querySelectorAll("[data-ft-name-line],[data-ft-epic-line],.ft-action").forEach(el => el.remove());
+          nodeEl.querySelectorAll("[data-ft-name-line],[data-ft-epic-line],[data-ft-2002-line],.ft-action").forEach(el => el.remove());
           nodeEl.querySelectorAll(".ft-meta:not([data-ft-epic-line])").forEach(el => { el.style.display = "none"; });
           const originalName = nodeEl.querySelector(".ft-name:not([data-ft-name-line])");
           if (originalName) originalName.style.display = "none";
@@ -144,9 +154,13 @@
           const parsed = splitNameEpic(originalName?.textContent || "");
           const name = person?.name || parsed.name || "Unknown";
           const epic = person?.epic_number || parsed.epic || "";
+          const sd = stateDistrict(person);
+          const aps = acPartSerial(person);
           const nameX = Number(originalName?.getAttribute("x")) || 14;
-          nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-name" data-ft-name-line="1" x="${nameX}" y="22">${esc(trunc(name, 24))}</text>`);
-          if (epic) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-epic-line="1" x="${nameX}" y="40">${esc(trunc(epic, 28))}</text>`);
+          nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-name" data-ft-name-line="1" x="${nameX}" y="20">${esc(trunc(name, 24))}</text>`);
+          if (epic) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-epic-line="1" x="${nameX}" y="36">${esc(trunc(epic, 28))}</text>`);
+          if (sd) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-2002-line="1" x="${nameX}" y="54">${esc(trunc(sd, 32))}</text>`);
+          if (aps) nodeEl.insertAdjacentHTML("beforeend", `<text class="ft-meta" data-ft-2002-line="1" x="${nameX}" y="70">${esc(trunc(aps, 36))}</text>`);
           let actions = "";
           if (applicant) actions += actionIcon("applicant", 204, "Edit applicant details", "✎");
           if (person) actions += actionIcon("person", 227, "Edit people details", "▤");
