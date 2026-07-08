@@ -7,10 +7,14 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="family-tree.css?v=26-07-08-02">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-04">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-04">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-04">
 </head>
 <body>
   <div class="ft-toolbar" role="toolbar" aria-label="Family Tree tools">
+    <button id="ftAddApplicant" type="button">Add Applicant</button>
+    <label class="ft-toggle-line"><input id="ftShowDetails" type="checkbox"><span>Show details</span></label>
     <button id="ftExportSvg" type="button">Export SVG</button>
     <button id="ftExportPng" type="button">Export Image</button>
     <button id="ftExportPdf" type="button" class="secondary">Export PDF</button>
@@ -27,31 +31,34 @@
     <div id="familyTreeCanvas" aria-live="polite"></div>
   </main>
 
+  <div id="modalRoot"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
   <div id="ftToast" role="status" aria-live="polite"></div>
+
   <script>
     function fitFamilyTreeToWindow() {
       const wrap = document.querySelector(".ft-canvas-wrap");
       const svg = document.querySelector("svg.family-tree-svg");
       if (!wrap || !svg) return;
-  
+
       const vb = svg.viewBox?.baseVal;
       const svgWidth = vb?.width || Number(svg.getAttribute("width")) || svg.getBoundingClientRect().width;
       const svgHeight = vb?.height || Number(svg.getAttribute("height")) || svg.getBoundingClientRect().height;
-  
+
       if (!svgWidth || !svgHeight) return;
-  
+
       const availableWidth = Math.max(260, wrap.clientWidth - 24);
       const availableHeight = Math.max(260, wrap.clientHeight - 24);
-  
+
       const fitZoom = Math.min(1, availableWidth / svgWidth, availableHeight / svgHeight);
-  
+
       svg.style.transform = `scale(${fitZoom})`;
       svg.style.transformOrigin = "top left";
-  
+
       wrap.scrollLeft = 0;
       wrap.scrollTop = 0;
     }
-  
+
     document.addEventListener("click", event => {
       if (event.target?.id !== "ftZoomFit") return;
       event.preventDefault();
@@ -59,6 +66,132 @@
       setTimeout(fitFamilyTreeToWindow, 0);
     }, true);
   </script>
-  <script type="module" src="family-tree.js?v=26-07-08-02"></script>
+
+  <script type="module">
+    import "./family-tree.js?v=26-07-08-04";
+    import { loadState, saveState } from "./storage.js";
+    import { formatAadhaar } from "./core.js";
+    import { openPersonPopup, initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-04";
+    import { openApplicantPopup, initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-04";
+
+    const DETAIL_KEY = "sir_family_tree_show_details";
+    const state = loadState();
+    const commit = () => saveState(state);
+    const showDetailsInput = document.getElementById("ftShowDetails");
+    const canvas = document.getElementById("familyTreeCanvas");
+    let enhancing = false;
+
+    initPersonPopupOverrides(state, commit);
+    initApplicantPopupOverrides(state, commit);
+
+    function dmy(value) {
+      const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return match ? `${match[3]}-${match[2]}-${match[1]}` : String(value || "");
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[ch]));
+    }
+
+    function trunc(value, limit = 24) {
+      const text = String(value || "").trim();
+      return text.length > limit ? text.slice(0, limit - 1) + "…" : text;
+    }
+
+    function personById(id) {
+      return state.people.find(person => person.person_id === id) || null;
+    }
+
+    function applicantByPersonId(id) {
+      return state.applicants.find(applicant => applicant.person_id === id) || null;
+    }
+
+    function lineIcon(type, x, y) {
+      if (type === "phone") return `<path d="M${x+1} ${y-7} C${x+1} ${y-3} ${x+5} ${y+1} ${x+9} ${y+1} L${x+11} ${y-1} L${x+8} ${y-4} L${x+6} ${y-2} C${x+4} ${y-3} ${x+3} ${y-4} ${x+2} ${y-6} L${x+4} ${y-8} L${x+2} ${y-10} Z"></path>`;
+      if (type === "file") return `<path d="M${x+2} ${y-10} H${x+8} L${x+12} ${y-6} V${y+2} H${x+2} Z"></path><path d="M${x+8} ${y-10} V${y-6} H${x+12}"></path>`;
+      return `<rect x="${x+1}" y="${y-10}" width="12" height="12" rx="1.5"></rect><line x1="${x+1}" y1="${y-6}" x2="${x+13}" y2="${y-6}"></line><line x1="${x+4}" y1="${y-12}" x2="${x+4}" y2="${y-8}"></line><line x1="${x+10}" y1="${y-12}" x2="${x+10}" y2="${y-8}"></line>`;
+    }
+
+    function detailLine(type, y, text) {
+      return `<g class="ft-extra-detail" data-ft-extra="1">${lineIcon(type, 14, y)}<text x="32" y="${y}">${esc(trunc(text, 28))}</text></g>`;
+    }
+
+    function actionIcon(action, x, label, symbol) {
+      return `<g class="ft-action" data-ft-action="${action}" tabindex="0" role="button" aria-label="${esc(label)}">
+        <title>${esc(label)}</title>
+        <rect class="ft-action-bg" x="${x}" y="6" width="19" height="19" rx="5"></rect>
+        <text class="ft-action-symbol" x="${x + 9.5}" y="20" text-anchor="middle">${esc(symbol)}</text>
+      </g>`;
+    }
+
+    function enhanceTree() {
+      if (enhancing) return;
+      enhancing = true;
+      try {
+        const svg = canvas?.querySelector("svg.family-tree-svg");
+        if (!svg) return;
+        const showDetails = showDetailsInput?.checked;
+        svg.querySelectorAll(".ft-person").forEach(nodeEl => {
+          nodeEl.querySelectorAll("[data-ft-extra],.ft-action").forEach(el => el.remove());
+          nodeEl.querySelectorAll(".ft-meta").forEach(el => { el.style.display = "none"; });
+
+          const personId = nodeEl.getAttribute("data-node-id") || "";
+          const person = personById(personId);
+          const applicant = applicantByPersonId(personId);
+
+          let actions = "";
+          if (applicant) actions += actionIcon("applicant", 204, "Edit applicant details", "✎");
+          if (person) actions += actionIcon("person", 227, "Edit people details", "👤");
+          if (actions) nodeEl.insertAdjacentHTML("beforeend", actions);
+
+          if (!showDetails || !applicant) return;
+          const details = [];
+          if (applicant.phone_number) details.push(detailLine("phone", 46, applicant.phone_number));
+          if (applicant.aadhaar_number) details.push(detailLine("file", 62, formatAadhaar(applicant.aadhaar_number)));
+          if (applicant.date_of_birth) details.push(detailLine("calendar", 78, dmy(applicant.date_of_birth)));
+          if (details.length) nodeEl.insertAdjacentHTML("beforeend", details.join(""));
+        });
+      } finally {
+        enhancing = false;
+      }
+    }
+
+    showDetailsInput.checked = localStorage.getItem(DETAIL_KEY) === "1";
+    showDetailsInput.addEventListener("change", () => {
+      localStorage.setItem(DETAIL_KEY, showDetailsInput.checked ? "1" : "0");
+      enhanceTree();
+    });
+
+    document.getElementById("ftAddApplicant")?.addEventListener("click", () => {
+      openApplicantPopup("").catch(error => alert(error.message || "Could not open Applicant popup."));
+    });
+
+    canvas?.addEventListener("click", event => {
+      const action = event.target.closest?.(".ft-action");
+      if (!action) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      const personGroup = action.closest(".ft-person");
+      const personId = personGroup?.getAttribute("data-node-id") || "";
+      const kind = action.getAttribute("data-ft-action");
+      if (kind === "person") {
+        if (!personById(personId)) return alert("People record not found for this box.");
+        openPersonPopup({ personId, state, commit }).catch(error => alert(error.message || "Could not open People popup."));
+      }
+      if (kind === "applicant") {
+        const applicant = applicantByPersonId(personId);
+        if (!applicant) return alert("Applicant record not found for this box.");
+        openApplicantPopup(applicant.applicant_id).catch(error => alert(error.message || "Could not open Applicant popup."));
+      }
+    }, true);
+
+    document.addEventListener("sir:data-changed", () => {
+      setTimeout(() => window.location.reload(), 120);
+    });
+
+    new MutationObserver(() => enhanceTree()).observe(canvas, { childList: true });
+    setTimeout(enhanceTree, 100);
+  </script>
 </body>
 </html>
