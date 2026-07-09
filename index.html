@@ -7,9 +7,9 @@
   <meta name="theme-color" content="#195b45">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icon.png">
-  <link rel="stylesheet" href="styles.css?v=26-07-08-15">
-  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-15">
-  <link rel="stylesheet" href="family-tree.css?v=26-07-08-15">
+  <link rel="stylesheet" href="styles.css?v=26-07-08-16">
+  <link rel="stylesheet" href="popups/person-popup.css?v=26-07-08-16">
+  <link rel="stylesheet" href="family-tree.css?v=26-07-08-16">
 </head>
 <body>
   <header class="app-header">
@@ -30,27 +30,12 @@
   <div class="app-disclaimer" role="note">Disclaimer: This is not an official mapping or government form. This app is only a helper tool for data entry.</div>
   <main class="tabbed-main">
     <div class="app-tabs" role="tablist" aria-label="Main sections">
-      <button id="familyTreeTabBtn" class="tab-btn active" type="button" data-tab-target="familyTreeTab">Family Tree</button>
-      <button id="applicantDataTabBtn" class="tab-btn" type="button" data-tab-target="readonlyTab">Applicant Data</button>
+      <button id="applicantDataTabBtn" class="tab-btn active" type="button" data-tab-target="readonlyTab">Applicant Data</button>
+      <button id="familyTreeTabBtn" class="tab-btn" type="button" data-tab-target="familyTreeTab">Family Tree</button>
       <button id="databaseTabBtn" class="tab-btn" type="button" data-tab-target="databaseTab">Database</button>
     </div>
 
-    <div id="familyTreeTab" class="tab-panel active" role="tabpanel">
-      <div class="ft-toolbar" role="toolbar" aria-label="Family Tree tools">
-        <button id="ftAddApplicant" type="button">Add Applicant</button>
-        <button id="ftToggleDetailsPanel" type="button" class="secondary">Show selected details</button>
-        <button id="ftExportPdf" type="button" class="secondary">Export PDF</button>
-      </div>
-      <section id="ftSelectedPanel" class="ft-selected-panel" hidden>
-        <h3 id="ftSelectedTitle">Selected details</h3>
-        <div id="ftSelectedContent" class="ft-selected-grid"></div>
-      </section>
-      <main class="ft-canvas-wrap">
-        <div id="familyTreeCanvas" aria-live="polite"></div>
-      </main>
-    </div>
-
-    <div id="readonlyTab" class="tab-panel" role="tabpanel">
+    <div id="readonlyTab" class="tab-panel active" role="tabpanel">
       <section class="panel full" id="readonlySection">
         <div class="section-head"><h2>Applicant Data</h2></div>
         <div class="readonly-actions readonly-top-actions">
@@ -66,6 +51,21 @@
       </section>
     </div>
 
+    <div id="familyTreeTab" class="tab-panel" role="tabpanel">
+      <div class="ft-toolbar" role="toolbar" aria-label="Family Tree tools">
+        <button id="ftAddApplicant" type="button">Add Applicant</button>
+        <button id="ftToggleDetailsPanel" type="button" class="secondary">Show selected details</button>
+        <button id="ftExportPdf" type="button" class="secondary">Export PDF</button>
+      </div>
+      <section id="ftSelectedPanel" class="ft-selected-panel" hidden>
+        <h3 id="ftSelectedTitle">Selected details</h3>
+        <div id="ftSelectedContent" class="ft-selected-grid"></div>
+      </section>
+      <main class="ft-canvas-wrap">
+        <div id="familyTreeCanvas" aria-live="polite"></div>
+      </main>
+    </div>
+
     <div id="databaseTab" class="tab-panel database-grid" role="tabpanel">
       <section class="panel" id="applicantsSection">
         <div class="section-head"><h2>Applicant Database</h2><button id="addApplicantBtn">Add Applicant</button></div>
@@ -79,7 +79,7 @@
   </main>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="modalRoot"></div>
-  <script type="module" src="app.js?v=26-07-08-15"></script>
-  <script type="module" src="family-tree-main.js?v=26-07-08-15"></script>
+  <script type="module" src="app.js?v=26-07-08-16"></script>
+  <script type="module" src="family-tree-main.js?v=26-07-08-16"></script>
 </body>
 </html>
