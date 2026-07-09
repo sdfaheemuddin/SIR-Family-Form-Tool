@@ -1,4 +1,4 @@
-import "./family-tree.js?v=26-07-08-14";
+import "./family-tree.js?v=26-07-08-15";
 import { loadState } from "./storage.js";
 import { formatAadhaar } from "./core.js";
 
