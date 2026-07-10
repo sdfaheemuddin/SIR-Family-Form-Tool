@@ -2,7 +2,7 @@
 import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
 import { backupState, clearState } from "./storage.js";
 import { downloadJson } from "./importExport.js";
-import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-09";
+import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-15";
 
 let stateRef;
 let commitRef;
@@ -24,6 +24,7 @@ function toast(message) { const box = $("#toast"); if (!box) return; box.textCon
 function applicantTopPhoto(applicant, name) { if (!onlyValidPhoto(applicant.photo_data)) return ""; return `<div class="applicant-top-photo"><img class="readonly-photo small-top-photo" src="${esc(applicant.photo_data)}" alt="Applicant photo"><a class="button-link small photo-download-link" href="${esc(applicant.photo_data)}" download="${esc(safeFilePart(name))}_photo.jpg">Download</a></div>`; }
 function readCell(label, value, copy = true, display = value) { const cleanValue = clean(value); return `<div class="copy-table-cell ${copy ? "copyable-cell" : "no-copy"}" ${copy ? `role="button" tabindex="0" data-copy="${esc(cleanValue)}" title="Click to copy"` : ""}><div class="copy-table-label">${esc(label)}</div><div class="copy-table-value">${esc(display)}</div>${copy ? `<div class="copy-chip">Copy</div>` : ""}</div>`; }
 async function copyText(value) { try { await navigator.clipboard.writeText(clean(value)); } catch { const temp = document.createElement("textarea"); temp.value = clean(value); document.body.append(temp); temp.select(); document.execCommand("copy"); temp.remove(); } toast("Copied."); }
+function notifyDataChanged(detail = {}) { document.dispatchEvent(new CustomEvent("sir:data-changed", { detail })); }
 
 function renderPeople() {
   const wrap = $("#peopleTableWrap");
@@ -73,7 +74,7 @@ function deletePerson(personId) { const used = stateRef.applicants.some(applican
 function deleteApplicant(applicantId) { const applicant = stateRef.applicants.find(row => row.applicant_id === applicantId); if (!confirm(`Delete applicant ${personName(applicant?.person_id)}?`)) return; stateRef.applicants = stateRef.applicants.filter(row => row.applicant_id !== applicantId); commitRef(); refreshScreen(); }
 function selectNext(currentId = "") { const rows = pendingApplicants(); const select = $("#readonlyApplicantSelect"); if (!rows.length) { select.dataset.selected = ""; renderReadonlyPicker(); toast("All applicants completed."); return; } const index = rows.findIndex(applicant => applicant.applicant_id === currentId); select.dataset.selected = rows[index >= 0 ? (index + 1) % rows.length : 0].applicant_id; renderReadonlyPicker(); }
 function markComplete() { const id = $("#readonlyApplicantSelect").value; const applicant = stateRef.applicants.find(row => row.applicant_id === id); if (!applicant) return; applicant.status_completed = true; commitRef(); renderDatabaseTables(); selectNext(id); }
-function clearAll() { if (confirm("Before clearing, export a JSON backup now? Press OK to export, Cancel to continue without exporting.")) downloadJson(stateRef); if (!confirm("Clear all people and applicants from this device? This cannot be undone unless you have a JSON backup.")) return; backupState(stateRef); stateRef.people = []; stateRef.applicants = []; clearState(); refreshScreen(); toast("All data cleared. A local backup was stored."); }
+function clearAll() { if (confirm("Before clearing, export a JSON backup now? Press OK to export, Cancel to continue without exporting.")) downloadJson(stateRef); if (!confirm("Clear all people and applicants from this device? This cannot be undone unless you have a JSON backup.")) return; backupState(stateRef); stateRef.people = []; stateRef.applicants = []; clearState(); refreshScreen(); toast("All data cleared. A local backup was stored."); notifyDataChanged({ reason: "clear-data" }); }
 function initTabs() {
   $$('[data-tab-target]').forEach(button => button.addEventListener("click", () => {
     $$(".tab-btn").forEach(tab => tab.classList.toggle("active", tab === button));

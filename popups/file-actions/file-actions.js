@@ -41,6 +41,10 @@ function closeModal(backdrop) {
   modalDepth = Math.max(0, modalDepth - 1);
 }
 
+function notifyDataChanged(detail = {}) {
+  document.dispatchEvent(new CustomEvent("sir:data-changed", { detail }));
+}
+
 function relatedPersonIds(applicant) {
   return [applicant.person_id, applicant.mapper_person_id, applicant.father_person_id, applicant.mother_person_id, applicant.spouse_person_id].filter(Boolean);
 }
@@ -144,6 +148,7 @@ async function importSelection(file, state, commit, renderAll, toast) {
       commit();
       renderAll();
       toast("Selected data imported.");
+      notifyDataChanged({ reason: "json-import", selectedApplicantId: selected.applicants[0]?.applicant_id || "" });
     }});
   } catch (error) {
     alert(error.message || "Import failed.");

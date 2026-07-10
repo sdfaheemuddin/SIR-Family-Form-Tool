@@ -2,8 +2,8 @@
 import { loadState, saveState } from "./storage.js";
 import { initUI } from "./ui.js";
 import { normalizeApplicant, normalizePerson } from "./core.js";
-import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-13";
-import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-13";
+import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-16";
+import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-16";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
@@ -24,13 +24,15 @@ const commit = () => saveState(state);
 window.addEventListener("error", event => console.error("App error", event.error));
 window.addEventListener("unhandledrejection", event => console.error("App promise error", event.reason));
 
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
-      .then(reg => console.log("Service worker registered", reg.scope))
-      .catch(err => console.error("Service worker failed", err));
-  });
-}
+// Service worker registration disabled during active development to avoid stale cached app files.
+// Re-enable this block when offline PWA behavior is needed again.
+// if ("serviceWorker" in navigator) {
+//   window.addEventListener("load", () => {
+//     navigator.serviceWorker.register("./service-worker.js", { scope: "./" })
+//       .then(reg => console.log("Service worker registered", reg.scope))
+//       .catch(err => console.error("Service worker failed", err));
+//   });
+// }
 
 commit(); // Save normalized/migrated structure.
 initUI(state, commit);
