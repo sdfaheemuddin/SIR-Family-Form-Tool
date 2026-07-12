@@ -4,7 +4,7 @@ let stateRef;
 let commitRef;
 let templateText = "";
 
-const VERSION = "26-07-08-14";
+const VERSION = "26-07-08-17";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
@@ -155,7 +155,7 @@ export async function openPersonPopup(options = {}) {
     modal.remove();
     toast("Person saved.");
     if (onSaved) onSaved(fromMapper && !has2002Details(person) ? null : person, person);
-    document.dispatchEvent(new CustomEvent("sir:data-changed"));
+    document.dispatchEvent(new CustomEvent("sir:data-changed", { detail: { reason: onSaved ? "person-saved-inline" : "person-saved" } }));
   });
 }
 
