@@ -1,9 +1,9 @@
-import "./family-tree.js?v=26-07-08-15";
+import { initFamilyTree } from "./family-tree.js?v=26-07-08-17";
 import { loadState } from "./storage.js";
 import { formatAadhaar } from "./core.js";
 
 const PANEL_KEY = "sir_family_tree_selected_panel";
-const state = loadState();
+let state = loadState();
 const canvas = document.getElementById("familyTreeCanvas");
 const panel = document.getElementById("ftSelectedPanel");
 const panelTitle = document.getElementById("ftSelectedTitle");
@@ -148,6 +148,15 @@ function enhanceTree() {
   renderSelectedPanel();
 }
 
+function refreshFamilyTree() {
+  if (!canvas) return;
+  state = loadState();
+  if (selectedPersonId && !state.people.some(person => person.person_id === selectedPersonId)) selectedPersonId = "";
+  initFamilyTree(canvas, state);
+  setTimeout(enhanceTree, 0);
+  renderSelectedPanel();
+}
+
 function initFamilyTreeMain() {
   if (!canvas) return;
 
@@ -169,8 +178,7 @@ function initFamilyTreeMain() {
   }, true);
 
   document.addEventListener("sir:data-changed", () => {
-    if (document.querySelector(".native-applicant-popup,.native-person-popup")) return;
-    setTimeout(() => window.location.reload(), 160);
+    setTimeout(refreshFamilyTree, 0);
   });
 
   new MutationObserver(() => enhanceTree()).observe(canvas, { childList: true });
