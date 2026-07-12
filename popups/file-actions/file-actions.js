@@ -2,6 +2,7 @@ import { backupState } from "../../storage.js";
 import { parseImportFile, sirFileBaseFromState } from "../../importExport.js";
 import { generatePdf, generateOfflinePdf } from "../../pdf.js";
 import { onlyDigits } from "../../core.js";
+import { openValidationReport, validateState } from "../../validator.js?v=26-07-08-17";
 
 let modalDepth = 0;
 const $ = selector => document.querySelector(selector);
@@ -121,6 +122,11 @@ function selectionModal({ title, actionLabel, source, includePeople, mode = "jso
 }
 
 function exportSelection(state) {
+  const validation = validateState(state);
+  if (!validation.valid) {
+    openValidationReport(state, { title: "Validator before JSON export", validation });
+    return;
+  }
   selectionModal({ title: "Export JSON", actionLabel: "Export JSON", source: state, includePeople: true, mode: "json", onConfirm: (applicantIds, personIds) => {
     const selected = filteredState(state, applicantIds, personIds);
     const blob = new Blob([JSON.stringify({ people_database: selected.people, applicant_database: selected.applicants }, null, 2)], { type: "application/json" });
