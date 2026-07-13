@@ -1,6 +1,6 @@
-import { initFamilyTree } from "./family-tree.js?v=26-07-08-17";
-import { loadState } from "./storage.js";
-import { formatAadhaar } from "./core.js";
+import { initFamilyTree } from "./family-tree.js?v=26-07-08-19";
+import { loadState } from "./storage.js?v=26-07-08-19";
+import { formatAadhaar } from "./core.js?v=26-07-08-19";
 
 const PANEL_KEY = "sir_family_tree_selected_panel";
 let state = loadState();
