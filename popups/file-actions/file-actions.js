@@ -1,8 +1,8 @@
-import { backupState } from "../../storage.js?v=26-07-08-18";
-import { parseImportFile, sirFileBaseFromState } from "../../importExport.js?v=26-07-08-18";
-import { generatePdf, generateOfflinePdf } from "../../pdf.js?v=26-07-08-18";
-import { onlyDigits } from "../../core.js?v=26-07-08-18";
-import { openValidationReport, validateState } from "../../validator.js?v=26-07-08-18";
+import { backupState } from "../../storage.js?v=26-07-08-19";
+import { parseImportFile, sirFileBaseFromState } from "../../importExport.js?v=26-07-08-19";
+import { generatePdf, generateOfflinePdf } from "../../pdf.js?v=26-07-08-19";
+import { onlyDigits } from "../../core.js?v=26-07-08-19";
+import { openValidationReport, validateState } from "../../validator.js?v=26-07-08-19";
 
 let modalDepth = 0;
 const $ = selector => document.querySelector(selector);
