@@ -85,6 +85,14 @@ function nextPeopleAfterSave(people, person) {
   return people.map(row => row.person_id === person.person_id ? person : row);
 }
 
+function isPersonReferenced(state, personId) {
+  return (state.applicants || []).some(applicant =>
+    [applicant.person_id, applicant.mapper_person_id, applicant.father_person_id, applicant.mother_person_id, applicant.spouse_person_id]
+      .filter(Boolean)
+      .includes(personId)
+  );
+}
+
 export async function openPersonPopup(options = {}) {
   const personId = typeof options === "string" ? options : (options.personId || "");
   const activeState = options.state || stateRef;
@@ -163,7 +171,7 @@ export async function openPersonPopup(options = {}) {
     const nextPeople = nextPeopleAfterSave(activeState.people, person);
     const nextState = { people: nextPeople, applicants: activeState.applicants };
     const impact = validatePersonSaveImpact(nextState, person.person_id);
-    if (!impact.valid) {
+    if (!impact.valid && (existing || isPersonReferenced(activeState, person.person_id))) {
       const message = validationMessage(impact) || "This change makes existing applicant data invalid.";
       errorBox.style.display = "block";
       errorBox.textContent = message;
