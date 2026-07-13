@@ -1,9 +1,9 @@
 // App bootstrapping.
-import { loadState, saveState } from "./storage.js?v=26-07-08-18";
-import { initUI } from "./ui.js?v=26-07-08-18";
-import { normalizeApplicant, normalizePerson } from "./core.js?v=26-07-08-18";
-import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-18";
-import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-18";
+import { loadState, saveState } from "./storage.js?v=26-07-08-19";
+import { initUI } from "./ui.js?v=26-07-08-19";
+import { normalizeApplicant, normalizePerson } from "./core.js?v=26-07-08-19";
+import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-19";
+import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-19";
 
 const loaded = loadState();
 const rawPeople = Array.isArray(loaded.people) ? loaded.people : [];
