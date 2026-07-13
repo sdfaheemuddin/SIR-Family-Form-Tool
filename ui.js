@@ -1,9 +1,9 @@
 // Main UI rendering and non-popup page actions.
-import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js";
-import { backupState, clearState } from "./storage.js";
-import { downloadJson } from "./importExport.js";
-import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-17";
-import { openValidationReport, toastValidationStatus } from "./validator.js?v=26-07-08-17";
+import { buildReadonly, formatAadhaar, onlyDigits } from "./core.js?v=26-07-08-18";
+import { backupState, clearState } from "./storage.js?v=26-07-08-18";
+import { downloadJson } from "./importExport.js?v=26-07-08-18";
+import { initFileActions } from "./popups/file-actions/file-actions.js?v=26-07-08-18";
+import { openValidationReport, toastValidationStatus } from "./validator.js?v=26-07-08-18";
 
 let stateRef;
 let commitRef;
@@ -86,4 +86,4 @@ function initTabs() {
 function initZoom() { const key = "sir_family_forms_zoom"; const apply = value => { const zoom = Math.min(1.3, Math.max(0.8, Number(value) || 1)); document.documentElement.style.setProperty("--app-zoom", zoom); localStorage.setItem(key, zoom); }; apply(localStorage.getItem(key) || 1); $("#zoomOutBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) - 0.1).toFixed(2))); $("#zoomResetBtn")?.addEventListener("click", () => apply(1)); $("#zoomInBtn")?.addEventListener("click", () => apply((Number(localStorage.getItem(key) || 1) + 0.1).toFixed(2))); }
 function addVersion() { if (!$("#appVersionBadge")) document.body.append(el("div", { id: "appVersionBadge", text: "Version 26-07-08" })); }
 function shouldToastValidation(reason) { return ["applicant-saved", "person-saved", "json-import"].includes(reason); }
-export async function initUI(state, commit) { stateRef = state; commitRef = commit; initTabs(); initZoom(); addVersion(); initFileActions({ state: stateRef, commit: commitRef, renderAll: refreshScreen, toast }); $("#validateDataBtn")?.addEventListener("click", () => openValidationReport(stateRef)); $("#clearDataBtn").addEventListener("click", clearAll); $("#readonlyApplicantSelect").addEventListener("change", event => { event.target.dataset.selected = event.target.value; renderReadonlyCard(event.target.value); syncReadonlyButtons(); }); $("#markCompleteBtn").addEventListener("click", markComplete); $("#nextApplicantBtn").addEventListener("click", () => selectNext($("#readonlyApplicantSelect").value)); document.addEventListener("sir:data-changed", event => { if (event.detail?.selectedApplicantId) $("#readonlyApplicantSelect").dataset.selected = event.detail.selectedApplicantId; refreshScreen(); if (shouldToastValidation(event.detail?.reason || "")) setTimeout(() => toastValidationStatus(stateRef, toast), 0); }); refreshScreen(); }
+export async function initUI(state, commit) { stateRef = state; commitRef = commit; initTabs(); initZoom(); addVersion(); initFileActions({ state: stateRef, commit: commitRef, renderAll: refreshScreen, toast }); $("#validateDataBtn")?.addEventListener("click", () => openValidationReport(stateRef)); document.addEventListener("click", event => { if (!event.target.closest?.("#validateDataBtn")) return; event.preventDefault(); openValidationReport(stateRef); }, true); $("#clearDataBtn").addEventListener("click", clearAll); $("#readonlyApplicantSelect").addEventListener("change", event => { event.target.dataset.selected = event.target.value; renderReadonlyCard(event.target.value); syncReadonlyButtons(); }); $("#markCompleteBtn").addEventListener("click", markComplete); $("#nextApplicantBtn").addEventListener("click", () => selectNext($("#readonlyApplicantSelect").value)); document.addEventListener("sir:data-changed", event => { if (event.detail?.selectedApplicantId) $("#readonlyApplicantSelect").dataset.selected = event.detail.selectedApplicantId; refreshScreen(); if (shouldToastValidation(event.detail?.reason || "")) setTimeout(() => toastValidationStatus(stateRef, toast), 0); }); refreshScreen(); }
