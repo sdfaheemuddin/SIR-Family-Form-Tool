@@ -1,10 +1,11 @@
-import { blankPerson, has2002Details, normalizeEpic, normalizePerson, validatePerson } from "../core.js";
+import { blankPerson, has2002Details, normalizeEpic, normalizePerson, validatePerson } from "../core.js?v=26-07-08-19";
+import { openValidationReport, validatePersonSaveImpact } from "../validator.js?v=26-07-08-19";
 
 let stateRef;
 let commitRef;
 let templateText = "";
 
-const VERSION = "26-07-08-17";
+const VERSION = "26-07-08-19";
 const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
@@ -72,6 +73,18 @@ function hasEpicValidationError(errors) {
   return errors.some(error => /EPIC/i.test(error) && !/2002/i.test(error));
 }
 
+function validationMessage(validation) {
+  return validation.results.flatMap(item =>
+    item.errors.map(error => `${item.type === "applicant" ? "Applicant" : "People Data"} ${item.label}: ${error}`)
+  ).join("\n");
+}
+
+function nextPeopleAfterSave(people, person) {
+  const index = people.findIndex(p => p.person_id === person.person_id);
+  if (index < 0) return [...people, person];
+  return people.map(row => row.person_id === person.person_id ? person : row);
+}
+
 export async function openPersonPopup(options = {}) {
   const personId = typeof options === "string" ? options : (options.personId || "");
   const activeState = options.state || stateRef;
@@ -117,9 +130,7 @@ export async function openPersonPopup(options = {}) {
   };
 
   form.elements.epic_number.required = fromApplicant;
-  if (epicLabel) {
-    epicLabel.classList.toggle("required", fromApplicant);
-  }
+  if (epicLabel) epicLabel.classList.toggle("required", fromApplicant);
 
   Object.entries(draft).forEach(([key, value]) => setField(form, key, value));
   if (draft.allow_nonstandard_epic) overrideRule.hidden = false;
@@ -148,9 +159,20 @@ export async function openPersonPopup(options = {}) {
     errorBox.style.display = errors.length ? "block" : "none";
     errorBox.textContent = errors.join("\n");
     if (errors.length) return;
-    const index = activeState.people.findIndex(p => p.person_id === person.person_id);
-    if (index >= 0) activeState.people[index] = person;
-    else activeState.people.push(person);
+
+    const nextPeople = nextPeopleAfterSave(activeState.people, person);
+    const nextState = { people: nextPeople, applicants: activeState.applicants };
+    const impact = validatePersonSaveImpact(nextState, person.person_id);
+    if (!impact.valid) {
+      const message = validationMessage(impact) || "This change makes existing applicant data invalid.";
+      errorBox.style.display = "block";
+      errorBox.textContent = message;
+      openValidationReport(nextState, { title: "Validator before saving People Data", validation: impact });
+      alert("This change makes existing applicant data invalid. Please fix the Validator errors before saving.");
+      return;
+    }
+
+    activeState.people = nextPeople;
     activeCommit();
     modal.remove();
     toast("Person saved.");
