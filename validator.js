@@ -1,5 +1,5 @@
 // Shared validation for the full SIR Family Forms dataset.
-import { validateApplicant, validatePerson } from "./core.js";
+import { validateApplicant, validatePerson } from "./core.js?v=26-07-08-19";
 
 const DOB_MAX = "2009-12-31";
 
@@ -27,6 +27,12 @@ function addDateOfBirthErrors(applicant, errors) {
   if (applicant.date_of_birth && applicant.date_of_birth > DOB_MAX) {
     errors.push("Date of Birth must be on or before 31-12-2009.");
   }
+}
+
+function applicantReferencesPerson(applicant, personId) {
+  return [applicant.person_id, applicant.mapper_person_id, applicant.father_person_id, applicant.mother_person_id, applicant.spouse_person_id]
+    .filter(Boolean)
+    .includes(personId);
 }
 
 export function validateState(state = {}) {
@@ -72,6 +78,31 @@ export function validateState(state = {}) {
   };
 }
 
+export function validatePersonSaveImpact(state = {}, personId = "") {
+  const validation = validateState(state);
+  if (!personId || validation.valid) return validation;
+
+  const applicants = Array.isArray(state.applicants) ? state.applicants : [];
+  const affectedApplicantIds = new Set(
+    applicants
+      .filter(applicant => applicantReferencesPerson(applicant, personId))
+      .map(applicant => applicant.applicant_id)
+  );
+
+  const results = validation.results.filter(item =>
+    (item.type === "person" && item.id === personId) ||
+    (item.type === "applicant" && affectedApplicantIds.has(item.id))
+  );
+  const errorCount = results.reduce((sum, item) => sum + item.errors.length, 0);
+
+  return {
+    valid: errorCount === 0,
+    errorCount,
+    itemCount: results.length,
+    results
+  };
+}
+
 function closeModal(backdrop) {
   backdrop?.remove();
 }
@@ -99,7 +130,7 @@ export function openValidationReport(state, options = {}) {
   if (validation.valid) {
     body.innerHTML = `<div class="message validator-ok">Validation passed. All applicants are valid.</div>`;
   } else {
-    body.innerHTML = `<div class="error-box validator-summary" style="display:block">Validation found ${validation.errorCount} issue(s) in ${validation.itemCount} record(s). Fix these before final export/PDF work.</div>
+    body.innerHTML = `<div class="error-box validator-summary" style="display:block">Validation found ${validation.errorCount} issue(s) in ${validation.itemCount} record(s). Fix these before saving/exporting.</div>
       <div class="validator-list">${validation.results.map(item => `<section class="validator-item">
         <h4>${esc(item.type === "applicant" ? "Applicant" : "People Data")}: ${esc(item.label)}</h4>
         <ul>${item.errors.map(error => `<li>${esc(error)}</li>`).join("")}</ul>
