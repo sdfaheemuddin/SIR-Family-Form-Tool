@@ -1,6 +1,6 @@
 // App bootstrapping.
 import { loadState, saveState } from "./storage.js?v=26-07-08-19";
-import { initUI } from "./ui.js?v=26-07-08-19";
+import { initUI } from "./ui.js?v=26-07-08-20";
 import { normalizeApplicant, normalizePerson } from "./core.js?v=26-07-08-19";
 import { initPersonPopupOverrides } from "./popups/person-popup.js?v=26-07-08-19";
 import { initApplicantPopupOverrides } from "./popups/applicant-popup.js?v=26-07-08-19";
