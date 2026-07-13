@@ -1,8 +1,8 @@
-import { backupState } from "../../storage.js";
-import { parseImportFile, sirFileBaseFromState } from "../../importExport.js";
-import { generatePdf, generateOfflinePdf } from "../../pdf.js";
-import { onlyDigits } from "../../core.js";
-import { openValidationReport, validateState } from "../../validator.js?v=26-07-08-17";
+import { backupState } from "../../storage.js?v=26-07-08-18";
+import { parseImportFile, sirFileBaseFromState } from "../../importExport.js?v=26-07-08-18";
+import { generatePdf, generateOfflinePdf } from "../../pdf.js?v=26-07-08-18";
+import { onlyDigits } from "../../core.js?v=26-07-08-18";
+import { openValidationReport, validateState } from "../../validator.js?v=26-07-08-18";
 
 let modalDepth = 0;
 const $ = selector => document.querySelector(selector);
@@ -173,7 +173,7 @@ function pdfSelection(offline, state) {
 }
 
 export function initFileActions({ state, commit, renderAll, toast }) {
-  $("#exportJsonBtn").addEventListener("click", () => exportSelection(state));
+  $("#exportJsonBtn").addEventListener("click", event => { event.preventDefault(); exportSelection(state); });
   $("#importJsonInput").addEventListener("change", event => importSelection(event.target.files[0], state, commit, renderAll, toast));
   $("#generatePdfBtn").addEventListener("click", () => pdfSelection(false, state));
   $("#offlinePdfBtn").addEventListener("click", () => pdfSelection(true, state));
