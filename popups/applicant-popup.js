@@ -1,6 +1,6 @@
-import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js";
-import { openPersonPopup } from "./person-popup.js?v=26-07-08-14";
-import { openPhotoPopup } from "./photo-popup.js?v=26-07-08-14";
+import { RELATIONSHIPS, blankApplicant, formatAadhaar, has2002Details, normalizeApplicant, onlyDigits, validateApplicant } from "../core.js?v=26-07-08-19";
+import { openPersonPopup } from "./person-popup.js?v=26-07-08-19";
+import { openPhotoPopup } from "./photo-popup.js?v=26-07-08-19";
 
 const ADD_NEW = "__add_new__";
 const DOB_MAX = "2009-12-31";
@@ -12,7 +12,7 @@ const $ = (selector, root = document) => root.querySelector(selector);
 
 async function getTemplate() {
   if (templateText) return templateText;
-  const response = await fetch("./popups/applicant-popup.html?v=26-07-08-14");
+  const response = await fetch("./popups/applicant-popup.html?v=26-07-08-19");
   if (!response.ok) throw new Error("Could not load Applicant popup template.");
   templateText = await response.text();
   return templateText;
@@ -131,7 +131,7 @@ async function handleAddNew(select, form, draft) {
     setSelects(form, draft);
     select.value = person.person_id;
     setSelects(form, draft);
-    document.dispatchEvent(new CustomEvent("sir:data-changed"));
+    document.dispatchEvent(new CustomEvent("sir:data-changed", { detail: { reason: "person-saved-inline" } }));
   }});
   return true;
 }
@@ -186,7 +186,7 @@ export async function openApplicantPopup(applicantId = "") {
       if (!person) return;
       setSelects(form, draft, { applicant: person.person_id, mapper: form.elements.mapper_person_id.value, father: form.elements.father_person_id.value, mother: form.elements.mother_person_id.value, spouse: form.elements.spouse_person_id.value });
       disableSelect(form.elements.person_id, Boolean(existing));
-      document.dispatchEvent(new CustomEvent("sir:data-changed"));
+      document.dispatchEvent(new CustomEvent("sir:data-changed", { detail: { reason: "person-saved-inline" } }));
     }});
   });
   $("[data-cancel]", form).addEventListener("click", () => shell.remove());
@@ -214,7 +214,7 @@ export async function openApplicantPopup(applicantId = "") {
     commitRef();
     shell.remove();
     toast("Applicant saved.");
-    document.dispatchEvent(new CustomEvent("sir:data-changed", { detail: { selectedApplicantId: applicant.applicant_id } }));
+    document.dispatchEvent(new CustomEvent("sir:data-changed", { detail: { reason: "applicant-saved", selectedApplicantId: applicant.applicant_id } }));
   });
 }
 
